@@ -150,11 +150,11 @@ export default class ChampSelectSession implements LCUEndpointResponseType<"get"
         return null;
     }
 
-    getTenBansRevealActionId(): number | null {
+    getTenBansRevealAction() {
         for (let actionGroup of this.actions)
             for (let action of actionGroup)
                 if (action.type === "ten_bans_reveal")
-                    return action.id;
+                    return action;
 
         return null;
     }

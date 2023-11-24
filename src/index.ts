@@ -3,15 +3,11 @@ import { TypedEmitter } from "tiny-typed-emitter";
 import axios from "axios";
 import { Agent } from "https";
 import ChampSelectSession from "./classes/champ-select-session.js";
-import { LANGUAGE_CODES, SERVER_REGIONS } from "./constants.js";
 import type Hasagi from "./types";
 export type { Hasagi }
 
-export * as Data from "./data.js";
-export * as Constants from "./constants.js"
-
-export type LanguageCode = typeof LANGUAGE_CODES[number];
-export type ServerRegion = typeof SERVER_REGIONS[number];
+export * as Constants from "./constants.js";
+export { default as ChampSelectSession } from "./classes/champ-select-session.js";
 
 const delay = (ms: number) => new Promise<void>(resolve => setTimeout(resolve, ms));
 
@@ -42,20 +38,29 @@ export default class HasagiClient extends TypedEmitter<Hasagi.Events> {
     this.coreClient.on("lcu-event", (e) => this.emit("lcu-event", e));
 
     this.on("connected", async () => {
+      this.subscribeWebSocketEvent("OnJsonApiEvent");
+      
       await delay(5000);
       await Promise.allSettled([
         this.Runes.getRunePages().then(runePages => {
           this.runePages = runePages;
-          this.emit("rune-pages-update", null, this.runePages);
+          this.emit("rune-pages-update", this.runePages);
         }),
-        this.getGameflowSession().then(gameflowSession => {
-          const oldGameflowSession = this.gameflowSession;
+        this.getGameflowSession().then(async gameflowSession => {
           this.gameflowSession = gameflowSession
-          this.emit("gameflow-session-update", oldGameflowSession, this.gameflowSession)
+          this.emit("gameflow-session-update", this.gameflowSession)
+          this.emit("gameflow-phase-update", this.gameflowSession?.phase ?? "None")
+        }),
+        this.ChampSelect.getSession().then(session => {
+          this.champSelectSession = session;
+          this.emit("champ-select-session-update", session);
+          this.emit("champ-select-phase-update", session.getPhase());
         }),
         this.getClientRegion().then(regionLocale => {
           this.regionLocale = regionLocale;
-        })
+        }),
+        this.Lobby.getLobby().then(lobby => { this.emit("lobby-update", lobby) }),
+        this.request({ method: "get", url: "/lol-end-of-game/v1/eog-stats-block" }).then(r => this.emit("end-of-game-data-received", r)),
       ]);
 
       this.isConnected = true;
@@ -71,6 +76,53 @@ export default class HasagiClient extends TypedEmitter<Hasagi.Events> {
       this.isConnected = false;
       this.emit("connection-state-change", false);
     });
+
+    this.addLCUEventListener({
+      path: "/lol-lobby/v2/lobby",
+      callback: (e) => {
+        switch (e.eventType) {
+          case "Create":
+          case "Update":
+            const data = e.data as Hasagi.Lobby;
+            this.emit("lobby-update", data);
+            break;
+          case "Delete":
+            this.emit("lobby-update", null);
+            break;
+        }
+      }
+    });
+
+    this.addLCUEventListener({
+      path: "/lol-end-of-game/v1/eog-stats-block",
+      callback: (e) => {
+        switch (e.eventType) {
+          case "Create":
+          case "Update":
+            const data = e.data as Hasagi.EndOfGameData;
+            this.emit("end-of-game-data-received", data);
+            break;
+          case "Delete":
+            break;
+        }
+      }
+    })
+
+    this.addLCUEventListener({
+      path: "/lol-matchmaking/v1/search",
+      callback: (e) => {
+        switch (e.eventType) {
+          case "Create":
+          case "Update":
+            const data = e.data as Hasagi.QueueState;
+            this.emit("queue-state-update", data);
+            break;
+          case "Delete":
+            this.emit("queue-state-update", null);
+            break;
+        }
+      }
+    })
 
     this.addLCUEventListener({
       path: "/lol-champ-select/v1/session",
@@ -105,10 +157,12 @@ export default class HasagiClient extends TypedEmitter<Hasagi.Events> {
   public readonly getBasicAuthToken = this.coreClient.getBasicAuthToken.bind(this.coreClient)
   public readonly getPort = this.coreClient.getPort.bind(this.coreClient)
   public readonly request = this.coreClient.request.bind(this.coreClient)
+  public readonly subscribeWebSocketEvent = this.coreClient.subscribeWebSocketEvent.bind(this.coreClient)
+  public readonly unsubscribeWebSocketEvent = this.coreClient.unsubscribeWebSocketEvent.bind(this.coreClient)
 
   ChampSelect = {
     getSession: this.buildRequest("get", "/lol-champ-select/v1/session", { transformResponse: res => new ChampSelectSession(res) }),
-    getPhase: this.buildRequest("get", "/lol-champ-select/v1/session", { transformResponse: res => new ChampSelectSession(res).getPhase() }),
+    getPhase: () => this.ChampSelect.getSession().then(session => session.getPhase())
   } as const;
 
   public readonly getLobbyInvitations = this.buildRequest("get", "/lol-lobby/v2/received-invitations")
@@ -163,6 +217,8 @@ export default class HasagiClient extends TypedEmitter<Hasagi.Events> {
     setTFTBoom: this.buildRequest("put", "/lol-cosmetics/v1/selection/tft-damage-skin"),
 
     setTFTArena: this.buildRequest("put", "/lol-cosmetics/v1/selection/tft-map-skin"),
+
+    setTFTLegend: this.buildRequest("put", "/lol-cosmetics/v1/selection/playbook"),
 
     getAccountLoadout: this.buildRequest("get", "/lol-loadouts/v4/loadouts/scope/account", { transformResponse: res => res[0] }),
 
@@ -261,24 +317,41 @@ export default class HasagiClient extends TypedEmitter<Hasagi.Events> {
     }
   } as const;
 
+  ItemSets = {
+    getItemSets: this.buildRequest("get", "/lol-item-sets/v1/item-sets/{summonerId}/sets", { transformParameters: async () => [await this.getLocalSummoner().then(summoner => summoner.summonerId)] as const }),
+    getItemSet: (uid: string) => this.ItemSets.getItemSets().then(itemSets => itemSets.itemSets.find(i => i.uid === uid)),
+    setItemSets: this.buildRequest("put", "/lol-item-sets/v1/item-sets/{summonerId}/sets", {
+      transformParameters: async (itemSets: LCUTypes.LolItemSetsItemSets | LCUTypes.LolItemSetsItemSets["itemSets"]) => {
+        const summoner = await this.getLocalSummoner();
+        if (Array.isArray(itemSets)) {
+          const currentItemSet: LCUEndpointResponseType<"get", "/lol-item-sets/v1/item-sets/{summonerId}/sets"> = await this.ItemSets.getItemSets();
+          return [summoner.summonerId, { ...currentItemSet, itemSets }] as const;
+        } else {
+          return [summoner.summonerId, itemSets] as const;
+        }
+      }
+    }),
+    deleteItemSet: (uid: string) => this.ItemSets.getItemSets().then(itemSets => this.ItemSets.setItemSets(itemSets.itemSets.filter(i => i.uid !== uid))),
+    addItemSet: (itemSet: LCUEndpointResponseType<"get", "/lol-item-sets/v1/item-sets/{summonerId}/sets">["itemSets"][number]) => this.ItemSets.getItemSets().then(itemSets => this.ItemSets.setItemSets({ ...itemSets, itemSets: [...itemSets.itemSets, itemSet] }))
+  } as const;
+
   //#region EventHandler
   private onTeamBuilderChampSelectSessionUpdate(event: LCUTypes.PluginResourceEvent<unknown>) {
     if (event.eventType === "Delete") {
-      const oldSession = this.champSelectSession;
       this.champSelectSession = null;
-      this.emit("champ-select-session-update", oldSession, null);
-      this.emit("champ-select-phase-update", oldSession?.getPhase() ?? null, null);
+      this.emit("champ-select-session-update", null);
+      this.emit("champ-select-phase-update", null);
       return;
     }
 
-    let oldSessionData = this.champSelectSession;
-    let newSessionData = new ChampSelectSession(event.data as any);
+    const oldSessionData = this.champSelectSession;
+    const newSessionData = new ChampSelectSession(event.data as any);
     this.champSelectSession = newSessionData;
-    this.emit("champ-select-session-update", oldSessionData, newSessionData);
+    this.emit("champ-select-session-update", newSessionData);
 
     if (oldSessionData !== null) {
       if (newSessionData.getPhase() !== oldSessionData.getPhase()) {
-        this.emit("champ-select-phase-update", oldSessionData.getPhase(), newSessionData.getPhase());
+        this.emit("champ-select-phase-update", newSessionData.getPhase());
       }
       if (newSessionData.isBanPhase() && oldSessionData.getPhase() === "PLANNING") {
         this.emit("champ-select-local-player-ban-turn", newSessionData.ownBanActionId);
@@ -287,41 +360,41 @@ export default class HasagiClient extends TypedEmitter<Hasagi.Events> {
         this.emit("champ-select-local-player-pick-turn", newSessionData.ownPickActionId)
       }
 
-      // if (!oldSessionData.getActionById(oldSessionData.ownPickActionId)?.completed && newSessionData.getActionById(newSessionData.ownPickActionId)?.completed) {
-      //   this.emit("champ-select-local-player-pick-completed", newSessionData.getActionById(newSessionData.ownPickActionId)!.championId);
-      // } else if (oldSessionData.getActionById(oldSessionData.ownPickActionId)?.completed && newSessionData.getActionById(newSessionData.ownPickActionId)?.completed) {
-      //   if (newSessionData.getLocalPlayer() != null && oldSessionData.getLocalPlayer()?.championId !== newSessionData.getLocalPlayer()?.championId)
-      //     this.emit("champ-select-local-player-pick-completed", newSessionData.getLocalPlayer()!.championId);
-      // }
-
       if (!oldSessionData.getActionById(oldSessionData.ownBanActionId)?.completed && newSessionData.getActionById(newSessionData.ownBanActionId)?.completed) {
         this.emit("champ-select-local-player-ban-completed", newSessionData.getActionById(newSessionData.ownBanActionId)!.championId);
       }
 
       const changedPickIntents: { summonerId: number, previousPickIntent: number, pickIntent: number }[] = [];
       newSessionData.myTeam.forEach((p, index) => {
-        const previousPickIntent = oldSessionData!.myTeam[index].championPickIntent;
-        const pickIntent = p.championPickIntent;
+        const previousPickIntent = oldSessionData!.myTeam[index].championId !== 0 ? oldSessionData!.myTeam[index].championId : oldSessionData!.myTeam[index].championPickIntent;
+        const pickIntent = p.championId !== 0 ? p.championId : p.championPickIntent;
 
-        if (previousPickIntent !== pickIntent || p.championId !== 0 && oldSessionData?.myTeam[index].championId === 0) {
+        if (previousPickIntent !== pickIntent) {
           changedPickIntents.push({
             summonerId: p.summonerId,
             previousPickIntent,
-            pickIntent: p.championId !== 0 ? p.championId : pickIntent
+            pickIntent
           })
         }
       })
 
-      changedPickIntents.forEach(changedPickIntent => this.emit("champ-select-pick-intent-change", changedPickIntent.summonerId, changedPickIntent.previousPickIntent, changedPickIntent.pickIntent))
+      changedPickIntents.forEach(changedPickIntent => this.emit("champ-select-pick-intent-change", changedPickIntent.summonerId, changedPickIntent.pickIntent))
 
     } else {
-      this.emit("champ-select-phase-update", null, newSessionData.getPhase());
-      // if ((newSessionData.getLocalPlayer()?.championId ?? 0) !== 0)
-      //   this.emit("champ-select-local-player-pick-completed", newSessionData.getLocalPlayer()!.championId);
+      this.emit("champ-select-phase-update", newSessionData.getPhase());
     }
 
-    if ((oldSessionData?.getLocalPlayer()?.championId ?? 0) !== (newSessionData.getLocalPlayer()?.championId ?? 0) && (newSessionData.getLocalPlayer()?.championId ?? 0) !== 0)
-      this.emit("champ-select-local-player-pick-completed", newSessionData.getLocalPlayer()!.championId);
+    const oldLocalPlayerData = oldSessionData?.getLocalPlayer() ?? null;
+    const newLocalPlayerData = newSessionData.getLocalPlayer();
+    const oldLocalPlayerPickAction = oldSessionData?.getActionById(oldSessionData.ownPickActionId) ?? null;
+    const newLocalPlayerPickAction = newSessionData.getActionById(newSessionData.ownPickActionId)
+
+    if (oldLocalPlayerPickAction === null && newLocalPlayerPickAction === null && (newLocalPlayerData?.championId ?? 0) !== (oldLocalPlayerData?.championId ?? 0))
+      this.emit("champ-select-local-player-pick-completed", newLocalPlayerData!.championId);
+    else if (oldLocalPlayerPickAction?.isInProgress && newLocalPlayerPickAction?.completed)
+      this.emit("champ-select-local-player-pick-completed", newLocalPlayerData!.championId);
+    else if (oldLocalPlayerPickAction?.completed && newLocalPlayerPickAction?.completed && oldLocalPlayerData?.championId !== newLocalPlayerData?.championId)
+      this.emit("champ-select-local-player-pick-completed", newLocalPlayerData!.championId);
   }
 
   private onPerksPagesUpdate(event: LCUTypes.PluginResourceEvent<unknown>) {
@@ -329,7 +402,7 @@ export default class HasagiClient extends TypedEmitter<Hasagi.Events> {
       let runes: any[] = event.data as any;
       const oldRunes = this.runePages;
       this.runePages = runes;
-      this.emit("rune-pages-update", oldRunes, this.runePages);
+      this.emit("rune-pages-update", this.runePages);
     }
   }
 
@@ -341,7 +414,7 @@ export default class HasagiClient extends TypedEmitter<Hasagi.Events> {
     if (currentIndex !== -1) this.runePages[currentIndex].current = false;
     if (index === -1) return;
     this.runePages[index] = updatedRunePage;
-    this.emit("rune-pages-update", oldRunes, this.runePages);
+    this.emit("rune-pages-update", this.runePages);
   }
 
   public currentQueue: LCUEndpointResponseType<"get", "/lol-gameflow/v1/session">["gameData"]["queue"] | null = null;
@@ -363,13 +436,14 @@ export default class HasagiClient extends TypedEmitter<Hasagi.Events> {
 
     const previousPhase = oldGameflowSession?.phase ?? "None";
     const currentPhase = this.gameflowSession?.phase ?? "None";
-    if (previousPhase !== currentPhase)
-      this.emit("gameflow-phase-update", previousPhase, currentPhase);
+    if (previousPhase !== currentPhase) {
+      this.emit("gameflow-phase-update", currentPhase);
+    }
 
 
     this.currentQueue = this.gameflowSession?.gameData.queue ?? null;
     this.currentMapId = this.gameflowSession?.map.id ?? null;
-    this.emit("gameflow-session-update", oldGameflowSession, this.gameflowSession);
+    this.emit("gameflow-session-update", this.gameflowSession);
   }
 
   private onLobbyUpdate(event: LCUTypes.PluginResourceEvent<unknown>) {
