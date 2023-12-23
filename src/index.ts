@@ -39,7 +39,7 @@ export default class HasagiClient extends TypedEmitter<Hasagi.Events> {
 
     this.on("connected", async () => {
       this.subscribeWebSocketEvent("OnJsonApiEvent");
-      
+
       await delay(5000);
       await Promise.allSettled([
         this.Runes.getRunePages().then(runePages => {
@@ -60,10 +60,12 @@ export default class HasagiClient extends TypedEmitter<Hasagi.Events> {
           this.regionLocale = regionLocale;
         }),
         this.Lobby.getLobby().then(lobby => { this.emit("lobby-update", lobby) }),
-        this.request({ method: "get", url: "/lol-end-of-game/v1/eog-stats-block" }).then(r => this.emit("end-of-game-data-received", r)),
+        this.request({ method: "get", path: "/lol-end-of-game/v1/eog-stats-block" }).then(r => this.emit("end-of-game-data-received", r)),
       ]);
 
       this.isConnected = true;
+
+      this.emit("ready");
       this.emit("connection-state-change", true);
     });
 
@@ -236,6 +238,8 @@ export default class HasagiClient extends TypedEmitter<Hasagi.Events> {
   getLocalSummonerRankedData = this.buildRequest("get", "/lol-ranked/v1/current-ranked-stats")
 
   getSummonerById = this.buildRequest("get", `/lol-summoner/v1/summoners/{id}`)
+  getSummonersByIds = this.buildRequest("get", `/lol-summoner/v2/summoners`)
+  getCachedSummonerByPuuid = this.buildRequest("get", `/lol-summoner/v1/summoners-by-puuid-cached/{puuid}`)
 
   downloadReplay = this.buildRequest("post", `/lol-replays/v1/rofls/{gameId}/download`, { transformParameters: (gameId: number) => [gameId, { componentType: "replay-button_match-history" }] as const })
 
@@ -364,21 +368,21 @@ export default class HasagiClient extends TypedEmitter<Hasagi.Events> {
         this.emit("champ-select-local-player-ban-completed", newSessionData.getActionById(newSessionData.ownBanActionId)!.championId);
       }
 
-      const changedPickIntents: { summonerId: number, previousPickIntent: number, pickIntent: number }[] = [];
+      const changedPickIntents: { puuid: string, previousPickIntent: number, pickIntent: number }[] = [];
       newSessionData.myTeam.forEach((p, index) => {
         const previousPickIntent = oldSessionData!.myTeam[index].championId !== 0 ? oldSessionData!.myTeam[index].championId : oldSessionData!.myTeam[index].championPickIntent;
         const pickIntent = p.championId !== 0 ? p.championId : p.championPickIntent;
 
         if (previousPickIntent !== pickIntent) {
           changedPickIntents.push({
-            summonerId: p.summonerId,
+            puuid: p.puuid,
             previousPickIntent,
             pickIntent
           })
         }
       })
 
-      changedPickIntents.forEach(changedPickIntent => this.emit("champ-select-pick-intent-change", changedPickIntent.summonerId, changedPickIntent.pickIntent))
+      changedPickIntents.forEach(changedPickIntent => this.emit("champ-select-pick-intent-change", changedPickIntent.puuid, changedPickIntent.pickIntent))
 
     } else {
       this.emit("champ-select-phase-update", newSessionData.getPhase());
