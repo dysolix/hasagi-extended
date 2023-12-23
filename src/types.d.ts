@@ -255,7 +255,7 @@ declare namespace Hasagi {
         "champ-select-local-player-pick-completed": (championId: number) => void;
         "champ-select-local-player-ban-turn": (actionId: number) => void;
         "champ-select-local-player-ban-completed": (championId: number) => void;
-        "champ-select-pick-intent-change": (summonerId: number, championIntent: number) => void;
+        "champ-select-pick-intent-change": (puuid: string, championIntent: number) => void;
        
         "rune-pages-update": (runePages: RunePage[]) => void;
     
