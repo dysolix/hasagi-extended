@@ -60,7 +60,7 @@ export default class HasagiClient extends TypedEmitter<Hasagi.Events> {
           this.regionLocale = regionLocale;
         }),
         this.Lobby.getLobby().then(lobby => { this.emit("lobby-update", lobby) }),
-        this.request({ method: "get", path: "/lol-end-of-game/v1/eog-stats-block" }).then(r => this.emit("end-of-game-data-received", r)),
+        this.request("get", "/lol-end-of-game/v1/eog-stats-block").then(r => this.emit("end-of-game-data-received", r)),
       ]);
 
       this.isConnected = true;
@@ -158,7 +158,7 @@ export default class HasagiClient extends TypedEmitter<Hasagi.Events> {
   public readonly buildRequest = this.coreClient.buildRequest.bind(this.coreClient)
   public readonly getBasicAuthToken = this.coreClient.getBasicAuthToken.bind(this.coreClient)
   public readonly getPort = this.coreClient.getPort.bind(this.coreClient)
-  public readonly request = this.coreClient.request.bind(this.coreClient)
+  public readonly request: CoreClient["request"] = this.coreClient.request.bind(this.coreClient);
   public readonly subscribeWebSocketEvent = this.coreClient.subscribeWebSocketEvent.bind(this.coreClient)
   public readonly unsubscribeWebSocketEvent = this.coreClient.unsubscribeWebSocketEvent.bind(this.coreClient)
 
