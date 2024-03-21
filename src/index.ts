@@ -162,14 +162,14 @@ export default class HasagiClient extends TypedEmitter<Hasagi.Events> {
   public readonly subscribeWebSocketEvent = this.coreClient.subscribeWebSocketEvent.bind(this.coreClient)
   public readonly unsubscribeWebSocketEvent = this.coreClient.unsubscribeWebSocketEvent.bind(this.coreClient)
 
-  ChampSelect = {
+  public readonly ChampSelect = {
     getSession: this.buildRequest("get", "/lol-champ-select/v1/session", { transformResponse: res => new ChampSelectSession(res) }),
     getPhase: () => this.ChampSelect.getSession().then(session => session.getPhase())
   } as const;
 
   public readonly getLobbyInvitations = this.buildRequest("get", "/lol-lobby/v2/received-invitations")
-  public readonly acceptLobbyInvite = this.buildRequest("post", "/lol-lobby/v2/received-invitations/{invitationId}/accept");
-  public readonly declineLobbyInvite = this.buildRequest("post", "/lol-lobby/v2/received-invitations/{invitationId}/decline");
+  public readonly acceptLobbyInvitation = this.buildRequest("post", "/lol-lobby/v2/received-invitations/{invitationId}/accept");
+  public readonly declineLobbyInvitation = this.buildRequest("post", "/lol-lobby/v2/received-invitations/{invitationId}/decline");
 
   public readonly Lobby = {
     getLobby: this.buildRequest("get", "/lol-lobby/v2/lobby"),
@@ -181,16 +181,18 @@ export default class HasagiClient extends TypedEmitter<Hasagi.Events> {
 
     sendInvitation: this.buildRequest("post", "/lol-lobby/v2/lobby/invitations"),
 
+    /** Using this to automatically queue is forbidden. */
     startQueue: this.buildRequest("post", "/lol-lobby/v2/lobby/matchmaking/search"),
     stopQueue: this.buildRequest("delete", "/lol-lobby/v2/lobby/matchmaking/search"),
 
     setPositionPreferences: this.buildRequest("put", "/lol-lobby/v2/lobby/members/localMember/position-preferences"),
   } as const;
 
-  acceptReadyCheck = this.buildRequest("post", "/lol-matchmaking/v1/ready-check/accept")
-  declineReadyCheck = this.buildRequest("post", "/lol-matchmaking/v1/ready-check/decline")
+  /** Using this to automatically accept a ready check is forbidden. */
+  public readonly acceptReadyCheck = this.buildRequest("post", "/lol-matchmaking/v1/ready-check/accept")
+  public readonly declineReadyCheck = this.buildRequest("post", "/lol-matchmaking/v1/ready-check/decline")
 
-  Runes = {
+  public readonly Runes = {
     getDisabledRunes: this.buildRequest("get", "/lol-perks/v1/perks/disabled"),
     setSelectedRunePage: this.buildRequest("put", "/lol-perks/v1/currentpage"),
     getSelectedRunePage: this.buildRequest("get", "/lol-perks/v1/currentpage"),
@@ -204,7 +206,7 @@ export default class HasagiClient extends TypedEmitter<Hasagi.Events> {
     getRunePages: this.buildRequest("get", "/lol-perks/v1/pages"),
   } as const
 
-  Inventory = {
+  public readonly Inventory = {
     getOwnedSkins: this.buildRequest("get", `/lol-champions/v1/inventories/{summonerId}/skins-minimal`, {
       transformParameters: async () => {
         const summoner = await this.getLocalSummoner();
@@ -234,25 +236,40 @@ export default class HasagiClient extends TypedEmitter<Hasagi.Events> {
     setProfileIcon: this.buildRequest("put", "/lol-summoner/v1/current-summoner/icon", { transformParameters: (iconId: number) => [{ profileIconId: iconId } as any] as const })
   } as const
 
-  getLocalSummoner = this.buildRequest("get", "/lol-summoner/v1/current-summoner")
-  getLocalSummonerRankedData = this.buildRequest("get", "/lol-ranked/v1/current-ranked-stats")
+  public readonly getLocalSummoner = this.buildRequest("get", "/lol-summoner/v1/current-summoner")
+  public readonly getLocalSummonerRankedData = this.buildRequest("get", "/lol-ranked/v1/current-ranked-stats")
 
-  getSummonerById = this.buildRequest("get", `/lol-summoner/v1/summoners/{id}`)
-  getSummonersByIds = this.buildRequest("get", `/lol-summoner/v2/summoners`)
-  getCachedSummonerByPuuid = this.buildRequest("get", `/lol-summoner/v1/summoners-by-puuid-cached/{puuid}`)
+  public readonly getSummonerById = this.buildRequest("get", `/lol-summoner/v1/summoners/{id}`)
+  public readonly getSummonersByIds = this.buildRequest("get", `/lol-summoner/v2/summoners`)
+  public readonly getCachedSummonerByPuuid = this.buildRequest("get", `/lol-summoner/v1/summoners-by-puuid-cached/{puuid}`)
 
-  downloadReplay = this.buildRequest("post", `/lol-replays/v1/rofls/{gameId}/download`, { transformParameters: (gameId: number) => [gameId, { componentType: "replay-button_match-history" }] as const })
+  public readonly downloadReplay = this.buildRequest("post", `/lol-replays/v1/rofls/{gameId}/download`, { transformParameters: (gameId: number) => [gameId, { componentType: "replay-button_match-history" }] as const })
 
-  watchReplay = this.buildRequest("post", `/lol-replays/v1/rofls/{gameId}/watch`, { transformParameters: (gameId: number) => [gameId, { componentType: "replay-button_match-history" }] as const })
+  public readonly watchReplay = this.buildRequest("post", `/lol-replays/v1/rofls/{gameId}/watch`, { transformParameters: (gameId: number) => [gameId, { componentType: "replay-button_match-history" }] as const })
 
-  getGameflowSession = this.buildRequest("get", "/lol-gameflow/v1/session")
-  getGameflowPhase = this.buildRequest("get", "/lol-gameflow/v1/gameflow-phase")
+  public readonly getGameflowSession = this.buildRequest("get", "/lol-gameflow/v1/session")
+  public readonly getGameflowPhase = this.buildRequest("get", "/lol-gameflow/v1/gameflow-phase")
 
-  getMatchmakingSearchState = this.buildRequest("get", "/lol-matchmaking/v1/search")
+  public readonly getMatchmakingSearchState = this.buildRequest("get", "/lol-matchmaking/v1/search")
 
-  getClientRegion = this.buildRequest("get", "/riotclient/region-locale")
+  public readonly getClientRegion = this.buildRequest("get", "/riotclient/region-locale")
 
-  LiveClient = {
+  public readonly sendNotification = this.buildRequest("post", "/player-notifications/v1/notifications", {
+    transformParameters(title: string, message: string, options?: { backgroundUrl?: string, iconUrl?: string }) {
+      return [{
+        detailKey: "pre_translated_details",
+        titleKey: "pre_translated_title",
+        data: {
+          title,
+          details: message
+        },
+        backgroundUrl: options?.backgroundUrl,
+        iconUrl: options?.iconUrl
+      } as unknown as LCUTypes.PlayerNotificationsPlayerNotificationResource] as const;
+    },
+  })
+
+  public readonly LiveClient = {
     request: this.liveClientAxiosInstance.request.bind(this),
 
     /**
@@ -321,7 +338,7 @@ export default class HasagiClient extends TypedEmitter<Hasagi.Events> {
     }
   } as const;
 
-  ItemSets = {
+  public readonly ItemSets = {
     getItemSets: this.buildRequest("get", "/lol-item-sets/v1/item-sets/{summonerId}/sets", { transformParameters: async () => [await this.getLocalSummoner().then(summoner => summoner.summonerId)] as const }),
     getItemSet: (uid: string) => this.ItemSets.getItemSets().then(itemSets => itemSets.itemSets.find(i => i.uid === uid)),
     setItemSets: this.buildRequest("put", "/lol-item-sets/v1/item-sets/{summonerId}/sets", {
