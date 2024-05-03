@@ -1,7 +1,7 @@
 {
   "name": "@hasagi/extended",
   "private": true,
-  "version": "0.1.4",
+  "version": "0.2.0",
   "description": "A library that makes using the League of Legends client API (LCU) easy.",
   "scripts": {
     "build": "node scripts/prebuild.mjs && tsc && node scripts/postbuild.mjs",
@@ -14,7 +14,7 @@
     "hasagi"
   ],
   "dependencies": {
-    "@hasagi/core": "^0.4.11",
+    "@hasagi/core": "^0.5.0",
     "tiny-typed-emitter": "^2.1.0"
   },
   "devDependencies": {
@@ -25,7 +25,7 @@
     ".": "./index.js"
   },
   "types": "./index.d.ts",
-  "type": "module",
+  "type": "commonjs",
   "repository": {
     "type": "git",
     "url": "https://github.com/dysolix/hasagi-extended.git"

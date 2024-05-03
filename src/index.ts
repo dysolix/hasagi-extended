@@ -1,5 +1,5 @@
-import { HasagiClient as CoreClient, LCUEndpointBodyType, LCUEndpointResponseType, LCUTypes, HasagiEvents } from "@hasagi/core"
-import { TypedEmitter } from "tiny-typed-emitter";
+import { HasagiClient as CoreClient, LCUEndpointBodyType, LCUEndpointResponseType, LCUTypes, HasagiCoreEvents } from "@hasagi/core"
+import { ListenerSignature, TypedEmitter } from "tiny-typed-emitter";
 import axios from "axios";
 import { Agent } from "https";
 import ChampSelectSession from "./classes/champ-select-session.js";
@@ -11,7 +11,8 @@ export { default as ChampSelectSession } from "./classes/champ-select-session.js
 
 const delay = (ms: number) => new Promise<void>(resolve => setTimeout(resolve, ms));
 
-export default class HasagiClient extends TypedEmitter<Hasagi.Events> {
+export class HasagiClient extends TypedEmitter<Hasagi.Events> {
+  /** Can't directly extend the core client because it messes up the typed events :( */
   private readonly coreClient: CoreClient = new CoreClient();
 
   public isConnected: boolean = false;
@@ -28,8 +29,10 @@ export default class HasagiClient extends TypedEmitter<Hasagi.Events> {
     adapter: "http"
   });
 
-  public constructor() {
+  public constructor(...params: ConstructorParameters<typeof CoreClient>) {
     super();
+
+    this.coreClient.setDefaultRetryOptions(params[0]?.defaultRetryOptions ?? null!);
 
     this.coreClient.on("connected", () => this.emit("connected"));
     this.coreClient.on("connecting", () => this.emit("connecting"));
@@ -80,87 +83,80 @@ export default class HasagiClient extends TypedEmitter<Hasagi.Events> {
     });
 
     this.addLCUEventListener({
+      //name: "OnJsonApiEvent_lol-lobby_v2_lobby",
       path: "/lol-lobby/v2/lobby",
-      callback: (e) => {
-        switch (e.eventType) {
-          case "Create":
-          case "Update":
-            const data = e.data as Hasagi.Lobby;
-            this.emit("lobby-update", data);
-            break;
-          case "Delete":
-            this.emit("lobby-update", null);
-            break;
-        }
-      }
+      callback: (e) => this.onLobbyUpdate(e)
     });
 
     this.addLCUEventListener({
+      //name: "OnJsonApiEvent_lol-end-of-game_v1_eog-stats-block",
       path: "/lol-end-of-game/v1/eog-stats-block",
-      callback: (e) => {
-        switch (e.eventType) {
-          case "Create":
-          case "Update":
-            const data = e.data as Hasagi.EndOfGameData;
-            this.emit("end-of-game-data-received", data);
-            break;
-          case "Delete":
-            break;
-        }
-      }
+      callback: (e) => this.onEndOfGameDataReceived(e)
     })
 
     this.addLCUEventListener({
+      //name: "OnJsonApiEvent_lol-matchmaking_v1_search",
       path: "/lol-matchmaking/v1/search",
-      callback: (e) => {
-        switch (e.eventType) {
-          case "Create":
-          case "Update":
-            const data = e.data as Hasagi.QueueState;
-            this.emit("queue-state-update", data);
-            break;
-          case "Delete":
-            this.emit("queue-state-update", null);
-            break;
-        }
-      }
+      callback: (e) => this.onMatchmakingSearchStateUpdate(e)
     })
 
     this.addLCUEventListener({
+      //name: "OnJsonApiEvent_lol-champ-select_v1_session",
       path: "/lol-champ-select/v1/session",
-      callback: (e) => this.onTeamBuilderChampSelectSessionUpdate(e as LCUTypes.PluginResourceEvent<unknown>)
+      callback: (e) => this.onChampSelectSessionUpdate(e)
     });
 
     this.addLCUEventListener({
       path: "/lol-perks/v1/pages",
-      callback: (e) => this.onPerksPagesUpdate(e as LCUTypes.PluginResourceEvent<unknown>)
+      callback: (e) => this.onRunePagesUpdate(e)
     });
 
     this.addLCUEventListener({
       path: "/lol-perks/v1/currentpage",
-      callback: (e) => this.onPerksCurrentPageUpdate(e as LCUTypes.PluginResourceEvent<unknown>)
+      callback: (e) => this.onCurrentRunePageUpdate(e)
     });
 
+    // this.addLCUEventListener({
+    //   name: "OnJsonApiEvent_lol-champ-select_v1_session", // You could omit the name and will still get the same result. If omitted, Hasagi will automatically set it to OnJsonApiEvent
+    //   path: "/lol-champ-select/v1/session",
+    //   callback: (e) => {
+    //     switch (e.eventType) {
+    //       case "Create":
+    //       case "Update":
+    //         const data = e.data as LCUEndpointResponseType<"get", "/lol-champ-select/v1/session">; // Type needs to be manually specified because event types can't be auto-generated
+    //         // ...
+    //         break;
+    //       case "Delete":
+    //         // Data is null in this case
+    //         break;
+    //     }
+    //   }
+    // });
+
     this.addLCUEventListener({
+      //name: "OnJsonApiEvent_lol-gameflow_v1_session",
       path: "/lol-gameflow/v1/session",
-      callback: (e) => this.onGameflowSessionUpdate(e as LCUTypes.PluginResourceEvent<unknown>)
-    });
-
-    this.addLCUEventListener({
-      path: "/lol-champ-select/v1/pickable-skin-ids",
-      callback: (e) => this.onTeamBuilderChampSelectPickableSkinIdsUpdate(e as LCUTypes.PluginResourceEvent<unknown>)
+      callback: (e) => this.onGameflowSessionUpdate(e)
     });
   }
 
-  public readonly connect = this.coreClient.connect.bind(this.coreClient)
-  public readonly addLCUEventListener = this.coreClient.addLCUEventListener.bind(this.coreClient)
-  public readonly removeLCUEventListener = this.coreClient.removeLCUEventListener.bind(this.coreClient)
-  public readonly buildRequest = this.coreClient.buildRequest.bind(this.coreClient)
   public readonly getBasicAuthToken = this.coreClient.getBasicAuthToken.bind(this.coreClient)
+  public readonly getPassword = this.coreClient.getPassword.bind(this.coreClient);
   public readonly getPort = this.coreClient.getPort.bind(this.coreClient)
+  public readonly getProtocol = this.coreClient.getHostWithAuthentication.bind(this.coreClient)
+
+  public readonly setDefaultRetryOptions = this.coreClient.setDefaultRetryOptions.bind(this.coreClient);
+
+  public readonly connect = this.coreClient.connect.bind(this.coreClient)
+
   public readonly request: CoreClient["request"] = this.coreClient.request.bind(this.coreClient);
-  public readonly subscribeWebSocketEvent = this.coreClient.subscribeWebSocketEvent.bind(this.coreClient)
-  public readonly unsubscribeWebSocketEvent = this.coreClient.unsubscribeWebSocketEvent.bind(this.coreClient)
+  public readonly poll: CoreClient["poll"] = this.coreClient.poll.bind(this.coreClient);
+  public readonly buildRequest = this.coreClient.buildRequest.bind(this.coreClient)
+
+  public readonly addLCUEventListener = this.coreClient.addLCUEventListener.bind(this.coreClient);
+  public readonly removeLCUEventListener = this.coreClient.removeLCUEventListener.bind(this.coreClient);
+  public readonly subscribeWebSocketEvent = this.coreClient.subscribeWebSocketEvent.bind(this.coreClient);
+  public readonly unsubscribeWebSocketEvent = this.coreClient.unsubscribeWebSocketEvent.bind(this.coreClient);
 
   public readonly ChampSelect = {
     getSession: this.buildRequest("get", "/lol-champ-select/v1/session", { transformResponse: res => new ChampSelectSession(res) }),
@@ -200,7 +196,6 @@ export default class HasagiClient extends TypedEmitter<Hasagi.Events> {
     createRunePage: this.buildRequest("post", "/lol-perks/v1/pages"),
     getRunePage: this.buildRequest("get", `/lol-perks/v1/pages/{id}`),
     deleteRunePage: this.buildRequest("delete", `/lol-perks/v1/pages/{id}`),
-    updateRunePage: this.buildRequest("put", `/lol-perks/v1/pages/{id}`),
     replaceRunePage: (id: number, runePage: Partial<LCUEndpointBodyType<"post", "/lol-perks/v1/pages">>) => this.Runes.deleteRunePage(id).then(() => this.Runes.createRunePage(runePage as any)),
 
     getRunePages: this.buildRequest("get", "/lol-perks/v1/pages"),
@@ -211,10 +206,23 @@ export default class HasagiClient extends TypedEmitter<Hasagi.Events> {
       transformParameters: async () => {
         const summoner = await this.getLocalSummoner();
         return [summoner.summonerId] as const;
+      },
+      transformResponse: res => res.filter(s => s.ownership.owned)
+    }),
+    getAllSkins: this.buildRequest("get", `/lol-champions/v1/inventories/{summonerId}/skins-minimal`, {
+      transformParameters: async () => {
+        const summoner = await this.getLocalSummoner();
+        return [summoner.summonerId] as const;
       }
     }),
 
     getOwnedChampions: this.buildRequest("get", `/lol-champions/v1/owned-champions-minimal`),
+    getAllChampions: this.buildRequest("get", `/lol-champions/v1/inventories/{summonerId}/champions`, {
+      transformParameters: async () => {
+        const summoner = await this.getLocalSummoner();
+        return [summoner.summonerId] as const;
+      }
+    }),
 
     setLittleLegend: this.buildRequest("put", "/lol-cosmetics/v1/selection/companion"),
 
@@ -239,6 +247,7 @@ export default class HasagiClient extends TypedEmitter<Hasagi.Events> {
   public readonly getLocalSummoner = this.buildRequest("get", "/lol-summoner/v1/current-summoner")
   public readonly getLocalSummonerRankedData = this.buildRequest("get", "/lol-ranked/v1/current-ranked-stats")
 
+  public readonly getSummonerByRiotId = this.buildRequest("get", `/lol-summoner/v1/alias/lookup`)
   public readonly getSummonerById = this.buildRequest("get", `/lol-summoner/v1/summoners/{id}`)
   public readonly getSummonersByIds = this.buildRequest("get", `/lol-summoner/v2/summoners`)
   public readonly getCachedSummonerByPuuid = this.buildRequest("get", `/lol-summoner/v1/summoners-by-puuid-cached/{puuid}`)
@@ -264,79 +273,10 @@ export default class HasagiClient extends TypedEmitter<Hasagi.Events> {
           details: message
         },
         backgroundUrl: options?.backgroundUrl,
-        iconUrl: options?.iconUrl
+        iconUrl: options?.iconUrl,
       } as unknown as LCUTypes.PlayerNotificationsPlayerNotificationResource] as const;
     },
   })
-
-  public readonly LiveClient = {
-    request: this.liveClientAxiosInstance.request.bind(this),
-
-    /**
-     * @param timeout If the Live Client API is not available after this timeout, the function will throw an error. Defaults to 30000 (milliseconds)
-     */
-    async waitForLiveClientAvailability(timeout = 30000) {
-      let elapsedTime = 0;
-      while (elapsedTime < timeout) {
-        let summonerName = await this.getLiveClientActivePlayerSummonerName();
-        if (summonerName !== null)
-          return;
-
-        await delay(1000);
-        elapsedTime += 1000;
-      }
-
-      throw new Error("Live Client Data is not available.");
-    },
-
-    async getLiveClientActivePlayerSummonerName() {
-      return await this.request({ method: "get", url: "/liveclientdata/activeplayername" }).then(res => res.data as string, err => null);
-    },
-
-    async getLiveClientData(): Promise<Hasagi.LiveClientAPI.AllGameData | null> {
-      return await this.request({ method: "get", url: "/liveclientdata/allgamedata" }).then(res => res.data, err => null)
-    },
-
-    async getLiveClientActivePlayer(): Promise<Hasagi.LiveClientAPI.LocalPlayer | null> {
-      return await this.request({ method: "get", url: "/liveclientdata/activeplayer" }).then(res => res.data, err => null)
-    },
-
-    async getLiveClientActivePlayerAbilities(): Promise<Hasagi.LiveClientAPI.LocalPlayerAbilities | null> {
-      return await this.request({ method: "get", url: "/liveclientdata/activeplayerabilities" }).then(res => res.data, err => null)
-    },
-
-    async getLiveClientActivePlayerRunes(): Promise<Hasagi.LiveClientAPI.LocalPlayerRunes | null> {
-      return await this.request({ method: "get", url: "/liveclientdata/activeplayerrunes" }).then(res => res.data, err => null)
-    },
-
-    async getLiveClientPlayerList(): Promise<Hasagi.LiveClientAPI.Player[] | null> {
-      return await this.request({ method: "get", url: "/liveclientdata/playerlist" }).then(res => res.data, err => null)
-    },
-
-    async getLiveClientPlayerScore(summonerName: string): Promise<Hasagi.LiveClientAPI.PlayerScores | null> {
-      return await this.request({ method: "get", url: encodeURI("/liveclientdata/playerscores?summonerName=" + summonerName) }).then(res => res.data, err => null)
-    },
-
-    async getLiveClientPlayerSummonerSpells(summonerName: string): Promise<Hasagi.LiveClientAPI.PlayerSummonerSpells | null> {
-      return await this.request({ method: "get", url: encodeURI("/liveclientdata/playersummonerspells?summonerName=" + summonerName) }).then(res => res.data, err => null)
-    },
-
-    async getLiveClientPlayerMainRunes(summonerName: string): Promise<Hasagi.LiveClientAPI.PlayerMainRunes | null> {
-      return await this.request({ method: "get", url: encodeURI("/liveclientdata/playermainrunes?summonerName=" + summonerName) }).then(res => res.data, err => null)
-    },
-
-    async getLiveClientPlayerItems(summonerName: string): Promise<Hasagi.LiveClientAPI.PlayerItem[] | null> {
-      return await this.request({ method: "get", url: encodeURI("/liveclientdata/playeritems?summonerName=" + summonerName) }).then(res => res.data, err => null)
-    },
-
-    async getLiveClientEvents(): Promise<{ Events: Hasagi.LiveClientAPI.Event[] } | null> {
-      return await this.request({ method: "get", url: "/liveclientdata/eventdata" }).then(res => res.data, err => null)
-    },
-
-    async getLiveClientGameStats(): Promise<Hasagi.LiveClientAPI.GameStats | null> {
-      return await this.request({ method: "get", url: "/liveclientdata/gamestats" }).then(res => res.data, err => null)
-    }
-  } as const;
 
   public readonly ItemSets = {
     getItemSets: this.buildRequest("get", "/lol-item-sets/v1/item-sets/{summonerId}/sets", { transformParameters: async () => [await this.getLocalSummoner().then(summoner => summoner.summonerId)] as const }),
@@ -357,7 +297,7 @@ export default class HasagiClient extends TypedEmitter<Hasagi.Events> {
   } as const;
 
   //#region EventHandler
-  private onTeamBuilderChampSelectSessionUpdate(event: LCUTypes.PluginResourceEvent<unknown>) {
+  private onChampSelectSessionUpdate(event: LCUTypes.PluginResourceEvent<unknown>) {
     if (event.eventType === "Delete") {
       this.champSelectSession = null;
       this.emit("champ-select-session-update", null);
@@ -418,7 +358,7 @@ export default class HasagiClient extends TypedEmitter<Hasagi.Events> {
       this.emit("champ-select-local-player-pick-completed", newLocalPlayerData!.championId);
   }
 
-  private onPerksPagesUpdate(event: LCUTypes.PluginResourceEvent<unknown>) {
+  private onRunePagesUpdate(event: LCUTypes.PluginResourceEvent<unknown>) {
     if (event.eventType === "Update") {
       let runes: any[] = event.data as any;
       const oldRunes = this.runePages;
@@ -427,7 +367,7 @@ export default class HasagiClient extends TypedEmitter<Hasagi.Events> {
     }
   }
 
-  private onPerksCurrentPageUpdate(event: LCUTypes.PluginResourceEvent<unknown>) {
+  private onCurrentRunePageUpdate(event: LCUTypes.PluginResourceEvent<unknown>) {
     const oldRunes = this.runePages.map(runePage => ({ ...runePage }))
     let updatedRunePage = event.data as any;
     let index = this.runePages.findIndex(rp => rp.id === updatedRunePage.id);
@@ -439,7 +379,7 @@ export default class HasagiClient extends TypedEmitter<Hasagi.Events> {
   }
 
   public currentQueue: LCUEndpointResponseType<"get", "/lol-gameflow/v1/session">["gameData"]["queue"] | null = null;
-  public currentMapId: number | null = null;
+  public currentMap: LCUEndpointResponseType<"get", "/lol-gameflow/v1/session">["map"] | null = null;
 
   private async onGameflowSessionUpdate(event: LCUTypes.PluginResourceEvent<unknown>) {
     const oldGameflowSession = this.gameflowSession;
@@ -461,9 +401,9 @@ export default class HasagiClient extends TypedEmitter<Hasagi.Events> {
       this.emit("gameflow-phase-update", currentPhase);
     }
 
-
     this.currentQueue = this.gameflowSession?.gameData.queue ?? null;
-    this.currentMapId = this.gameflowSession?.map.id ?? null;
+    this.currentMap = this.gameflowSession?.map ?? null;
+
     this.emit("gameflow-session-update", this.gameflowSession);
   }
 
@@ -471,22 +411,41 @@ export default class HasagiClient extends TypedEmitter<Hasagi.Events> {
     switch (event.eventType) {
       case "Create":
       case "Update":
-
+        const data = event.data as Hasagi.Lobby;
+        this.emit("lobby-update", data);
+        break;
       case "Delete":
-
+        this.emit("lobby-update", null);
+        break;
     }
   }
 
-  /**
-   * This only gets updated in champ select
-   */
-  pickableSkinIds: number[] = [];
-  private onTeamBuilderChampSelectPickableSkinIdsUpdate(event: LCUTypes.PluginResourceEvent<unknown>) {
-    if (event.eventType === "Delete")
-      return;
+  private onEndOfGameDataReceived(event: LCUTypes.PluginResourceEvent<unknown>) {
+    switch (event.eventType) {
+      case "Create":
+      case "Update":
+        const data = event.data as Hasagi.EndOfGameData;
+        this.emit("end-of-game-data-received", data);
+        break;
+      case "Delete":
+        break;
+    }
+  }
 
-    this.pickableSkinIds = event.data as any;
+  private onMatchmakingSearchStateUpdate(event: LCUTypes.PluginResourceEvent<unknown>) {
+    switch (event.eventType) {
+      case "Create":
+      case "Update":
+        const data = event.data as Hasagi.QueueState;
+        this.emit("queue-state-update", data);
+        break;
+      case "Delete":
+        this.emit("queue-state-update", null);
+        break;
+    }
   }
 
   //#endregion
 }
+
+export default HasagiClient;
