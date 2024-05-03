@@ -87,8 +87,8 @@ export default class ChampSelectSession implements LCUEndpointResponseType<"get"
                 }
             }
     }
-    
-    
+
+
     getPickedChampionIds(): number[] {
         let picked: number[] = [];
 
@@ -117,28 +117,28 @@ export default class ChampSelectSession implements LCUEndpointResponseType<"get"
         return this.timer.phase as any;
     }
 
-    isBanPhase(){
-        for(let actionId of this.inProgressActionIds){
+    isBanPhase() {
+        for (let actionId of this.inProgressActionIds) {
             let action = this.getActionById(actionId);
-            if(action?.isInProgress && action?.type === "ban" && !action?.completed)
+            if (action?.isInProgress && action?.type === "ban" && !action?.completed)
                 return true;
         }
 
         return false;
     }
 
-    isPickPhase(){
-        for(let actionId of this.inProgressActionIds){
+    isPickPhase() {
+        for (let actionId of this.inProgressActionIds) {
             let action = this.getActionById(actionId);
-            if(action?.isInProgress && action?.type === "pick" && !action?.completed)
+            if (action?.isInProgress && action?.type === "pick" && !action?.completed)
                 return true;
         }
 
         return false;
     }
 
-    isDraft(){
-        return this.hasSimultaneousPicks;
+    isDraft() {
+        return !this.hasSimultaneousPicks;
     }
 
     getActionById(id: number) {
