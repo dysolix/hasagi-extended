@@ -1,7 +1,7 @@
 {
   "name": "@hasagi/extended",
   "private": true,
-  "version": "0.2.2",
+  "version": "0.2.3",
   "description": "A library that makes using the League of Legends client API (LCU) easy.",
   "scripts": {
     "build": "node scripts/prebuild.mjs && tsc && node scripts/postbuild.mjs",
@@ -14,7 +14,7 @@
     "hasagi"
   ],
   "dependencies": {
-    "@hasagi/core": "^0.5.3",
+    "@hasagi/core": "^0.5.4",
     "tiny-typed-emitter": "^2.1.0"
   },
   "devDependencies": {
