@@ -1,9 +1,7 @@
-import { HasagiClient as CoreClient, LCUEndpointBodyType, LCUEndpointResponseType, LCUTypes, HasagiCoreEvents } from "@hasagi/core"
-import { ListenerSignature, TypedEmitter } from "tiny-typed-emitter";
-import axios from "axios";
-import { Agent } from "https";
+import { HasagiClient as CoreClient, LCUEndpointBodyType, LCUEndpointResponseType, LCUTypes } from "@hasagi/core"
 import ChampSelectSession from "./classes/champ-select-session.js";
 import type Hasagi from "./types";
+import { TypedEmitter } from "tiny-typed-emitter";
 export type { Hasagi }
 
 export * as Constants from "./constants.js";
@@ -20,14 +18,6 @@ export class HasagiClient extends TypedEmitter<Hasagi.Events> {
   public gameflowSession: LCUEndpointResponseType<"get", "/lol-gameflow/v1/session"> | null = null;
   public champSelectSession: ChampSelectSession | null = null;
   public runePages: LCUEndpointResponseType<"get", "/lol-perks/v1/pages"> = [];
-
-  private liveClientAxiosInstance = axios.create({
-    baseURL: "https://127.0.0.1:2999",
-    httpsAgent: new Agent({
-      rejectUnauthorized: false
-    }),
-    adapter: "http"
-  });
 
   public constructor(...params: ConstructorParameters<typeof CoreClient>) {
     super();
@@ -115,23 +105,6 @@ export class HasagiClient extends TypedEmitter<Hasagi.Events> {
       path: "/lol-perks/v1/currentpage",
       callback: (e) => this.onCurrentRunePageUpdate(e)
     });
-
-    // this.addLCUEventListener({
-    //   name: "OnJsonApiEvent_lol-champ-select_v1_session", // You could omit the name and will still get the same result. If omitted, Hasagi will automatically set it to OnJsonApiEvent
-    //   path: "/lol-champ-select/v1/session",
-    //   callback: (e) => {
-    //     switch (e.eventType) {
-    //       case "Create":
-    //       case "Update":
-    //         const data = e.data as LCUEndpointResponseType<"get", "/lol-champ-select/v1/session">; // Type needs to be manually specified because event types can't be auto-generated
-    //         // ...
-    //         break;
-    //       case "Delete":
-    //         // Data is null in this case
-    //         break;
-    //     }
-    //   }
-    // });
 
     this.addLCUEventListener({
       //name: "OnJsonApiEvent_lol-gameflow_v1_session",
@@ -445,7 +418,122 @@ export class HasagiClient extends TypedEmitter<Hasagi.Events> {
     }
   }
 
+
+  private updateLobby(lobby: Hasagi.Lobby) {
+    const localPlayerTeamId = lobby.localMember.teamId;
+    const maxMembers = lobby.gameConfig.maxHumanPlayers || lobby.gameConfig.maxLobbySize;
+    const curMembers = lobby.members.length;
+    const teamMembers = lobby.members.filter(m => m.teamId === localPlayerTeamId);
+    const enemyTeamMembers = lobby.members.filter(m => m.teamId !== localPlayerTeamId);
+
+    const queueId = lobby.gameConfig.queueId;
+    const isCustom = lobby.gameConfig.isCustom;
+    const gameMode = lobby.gameConfig.gameMode;
+    const firstPositionPreference = lobby.localMember.firstPositionPreference;
+    const secondPositionPreference = lobby.localMember.secondPositionPreference;
+
+    function mapMember(member: LCUTypes.LolLobbyLobbyParticipantDto) {
+      return {
+        puuid: member.puuid,
+        summonerId: member.summonerId,
+        isBot: member.isBot,
+        championId: member.botChampionId,
+        botId: member.botUuid
+      }
+    }
+
+    const lobbyData = {
+      queueId,
+      gameMode,
+
+      isCustom,
+
+      firstPositionPreference,
+      secondPositionPreference,
+
+      currentMemberCount: curMembers,
+      maximumMemberCount: maxMembers,
+      members: lobby.members.map(mapMember),
+      teamMembers: teamMembers.map(mapMember),
+      enemyTeamMembers: enemyTeamMembers.map(mapMember)
+    }
+  }
+
   //#endregion
+}
+
+class GameMode {
+  public static readonly Quickplay = new GameMode({ displayName: "Quickplay", queueId: 187 });
+  public static readonly NormalDraft = new GameMode({ displayName: "Normal • Draft", queueId: 187 });
+
+  public static readonly RankedSolo = new GameMode({ displayName: "Ranked Solo/Duo", queueId: 420 });
+  public static readonly RankedFlex = new GameMode({ displayName: "Ranked Flex", queueId: 440 });
+
+  public static readonly ARAM = new GameMode({ displayName: "ARAM", queueId: 450 });
+
+  public static readonly Arena = new GameMode({ displayName: "Arena", queueId: 1710 });
+
+  public static readonly SwarmSolo = new GameMode({ displayName: "Swarm", queueId: 1810 });
+  public static readonly SwarmDuo = new GameMode({ displayName: "Swarm", queueId: 1820 });
+  public static readonly SwarmTrio = new GameMode({ displayName: "Swarm", queueId: 1830 });
+  public static readonly SwarmSquad = new GameMode({ displayName: "Swarm", queueId: 1840 });
+
+  public static readonly TFTNormal = new GameMode({ displayName: "Teamfight Tactics • Normal", queueId: 1090 });
+  public static readonly TFTRanked = new GameMode({ displayName: "Teamfight Tactics • Ranked", queueId: 1100 });
+  public static readonly TFTDoubleUp = new GameMode({ displayName: "Teamfight Tactics • Double Up", queueId: 1160 });
+  public static readonly TFTHyperRoll = new GameMode({ displayName: "Teamfight Tactics • Hyper Roll", queueId: 1130 });
+
+  public static readonly PracticeTool = new GameMode({ displayName: "Practice Tool", gameMode: "PRACTICETOOL" });
+
+  private constructor(input: { queueId?: number, gameMode?: string, displayName: string }) {
+
+  }
+
+  public static resolve(input: { isCustom?: boolean, gameMode?: string, queueId?: number }) {
+    let mode: string;
+    if(input.gameMode === "PRACTICETOOL")
+      mode = "Practice Tool"
+    else if (input.isCustom)
+      mode = `Custom`;
+    else
+      switch (input.gameMode) {
+        case "CLASSIC":
+          mode = "Normal";
+          break;
+        case "ARAM":
+          mode = "ARAM";
+          break;
+        case "TUTORIAL":
+          mode = "Tutorial";
+          break;
+        case "URF":
+          mode = "URF";
+          break;
+        case "ONEFORALL":
+          mode = "One for All";
+          break
+        case "GAMEMODEX":
+          mode = "Nexus Blitz";
+          break;
+        case "NEXUSBLITZ":
+          mode = "Nexus Blitz";
+          break;
+        case "ULTBOOK":
+          mode = "Ultimate Spellbook";
+          break;
+        case "TFT":
+          mode = "TFT";
+          break;
+        case "CHERRY":
+          mode = "Arena";
+          break;
+        case "STRAWBERRY":
+          mode = "Swarm";
+        default:
+          mode = input.gameMode ?? "";
+          break;
+      }
+  }
 }
 
 export default HasagiClient;
