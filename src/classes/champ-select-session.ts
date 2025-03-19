@@ -41,6 +41,9 @@ export default class ChampSelectSession implements LCUEndpointResponseType<"get"
     ownPickActionId: number;
     inProgressActionIds: number[];
 
+    showQuitButton: boolean;
+    isLegacyChampSelect: boolean;
+
     constructor(data: LCUEndpointResponseType<"get", "/lol-champ-select/v1/session">) {
         this.ownBanActionId = -1;
         this.ownPickActionId = -1;
@@ -73,6 +76,8 @@ export default class ChampSelectSession implements LCUEndpointResponseType<"get"
         this.isCustomGame = data.isCustomGame;
         this.bans = data.bans;
         this.pickOrderSwaps = data.pickOrderSwaps;
+        this.showQuitButton = data.showQuitButton;
+        this.isLegacyChampSelect = data.isLegacyChampSelect;
 
         for (let actionGroup of this.actions)
             for (let action of actionGroup) {
@@ -87,6 +92,7 @@ export default class ChampSelectSession implements LCUEndpointResponseType<"get"
                 }
             }
     }
+    
 
 
     getPickedChampionIds(): number[] {
