@@ -124,7 +124,7 @@ export class HasagiClient extends TypedEmitter<Hasagi.Events> {
 
   public readonly request: CoreClient["request"] = this.coreClient.request.bind(this.coreClient);
   public readonly poll: CoreClient["poll"] = this.coreClient.poll.bind(this.coreClient);
-  public readonly buildRequest = this.coreClient.buildRequest.bind(this.coreClient)
+  public readonly buildRequest: CoreClient["buildRequest"] = this.coreClient.buildRequest.bind(this.coreClient)
 
   public readonly addLCUEventListener = this.coreClient.addLCUEventListener.bind(this.coreClient);
   public readonly removeLCUEventListener = this.coreClient.removeLCUEventListener.bind(this.coreClient);
@@ -209,7 +209,7 @@ export class HasagiClient extends TypedEmitter<Hasagi.Events> {
 
     updateAccountLoadout: this.buildRequest("put", "/lol-loadouts/v4/loadouts/{id}", {
       transformParameters: async (body: LCUTypes.LolLoadoutsUpdateLoadoutDTO["loadout"]) => {
-        var accountLoadout = await this.Inventory.getAccountLoadout() as LCUEndpointResponseType<"get", "/lol-loadouts/v4/loadouts/scope/account">[number];
+        let accountLoadout = await this.Inventory.getAccountLoadout() as LCUEndpointResponseType<"get", "/lol-loadouts/v4/loadouts/scope/account">[number];
         return [accountLoadout.id, { ...accountLoadout, loadout: { ...accountLoadout.loadout, ...body } }] as const;
       }
     }),

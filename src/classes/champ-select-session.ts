@@ -2,12 +2,6 @@ import { LCUEndpointResponseType, LCUTypes } from "@hasagi/core";
 
 export default class ChampSelectSession implements LCUEndpointResponseType<"get", "/lol-champ-select/v1/session"> {
     gameId: number;
-    timer: LCUTypes.LolChampSelectChampSelectTimer;
-    chatDetails: LCUTypes.LolChampSelectChampSelectChatRoomDetails;
-    myTeam: LCUTypes.LolChampSelectChampSelectPlayerSelection[];
-    theirTeam: LCUTypes.LolChampSelectChampSelectPlayerSelection[];
-    trades: LCUTypes.LolChampSelectChampSelectTradeContract[];
-    pickOrderSwaps: LCUTypes.LolChampSelectChampSelectSwapContract[];
     actions: {
         actorCellId: number;
         championId: number;
@@ -17,7 +11,6 @@ export default class ChampSelectSession implements LCUEndpointResponseType<"get"
         isInProgress: boolean;
         type: "ban" | "pick" | "ten_bans_reveal";
     }[][];
-    bans: LCUTypes.LolChampSelectChampSelectBannedChampions;
     localPlayerCellId: number;
     isSpectating: boolean;
     allowSkinSelection: boolean;
@@ -29,9 +22,7 @@ export default class ChampSelectSession implements LCUEndpointResponseType<"get"
     allowLockedEvents: boolean;
     lockedEventIndex: number;
     benchEnabled: boolean;
-    benchChampions: LCUTypes.LolChampSelectBenchChampion[];
     counter: number;
-    recoveryCounter: number;
     skipChampionSelect: boolean;
     hasSimultaneousBans: boolean;
     hasSimultaneousPicks: boolean;
@@ -43,6 +34,22 @@ export default class ChampSelectSession implements LCUEndpointResponseType<"get"
 
     showQuitButton: boolean;
     isLegacyChampSelect: boolean;
+
+    allowSubsetChampionPicks: boolean;
+    allowPlayerPickSameChampion: boolean;
+    disallowBanningTeammateHoveredChampions: boolean;
+    queueId: number;
+
+    bans: LCUTypes.TeamBuilderDirect_ChampSelectBannedChampions;
+    id: string;
+    timer: LCUTypes.TeamBuilderDirect_TeambuilderDirectTypes_ChampSelectTimer;
+    chatDetails: LCUTypes.TeamBuilderDirect_ChampSelectChatRoomDetails;
+    myTeam: LCUTypes.TeamBuilderDirect_ChampSelectPlayerSelection[];
+    theirTeam: LCUTypes.TeamBuilderDirect_ChampSelectPlayerSelection[];
+    trades: LCUTypes.TeamBuilderDirect_ChampSelectSwapContract[];
+    pickOrderSwaps: LCUTypes.TeamBuilderDirect_ChampSelectSwapContract[];
+    positionSwaps: LCUTypes.TeamBuilderDirect_ChampSelectSwapContract[];
+    benchChampions: LCUTypes.TeamBuilderDirect_BenchChampion[];
 
     constructor(data: LCUEndpointResponseType<"get", "/lol-champ-select/v1/session">) {
         this.ownBanActionId = -1;
@@ -67,17 +74,22 @@ export default class ChampSelectSession implements LCUEndpointResponseType<"get"
         this.localPlayerCellId = data.localPlayerCellId;
         this.lockedEventIndex = data.lockedEventIndex;
         this.myTeam = data.myTeam;
-        this.recoveryCounter = data.recoveryCounter;
         this.rerollsRemaining = data.rerollsRemaining;
         this.skipChampionSelect = data.skipChampionSelect;
         this.theirTeam = data.theirTeam;
         this.timer = data.timer;
-        this.trades = data.trades;
         this.isCustomGame = data.isCustomGame;
         this.bans = data.bans;
         this.pickOrderSwaps = data.pickOrderSwaps;
         this.showQuitButton = data.showQuitButton;
         this.isLegacyChampSelect = data.isLegacyChampSelect;
+        this.allowSubsetChampionPicks = data.allowSubsetChampionPicks;
+        this.allowPlayerPickSameChampion = data.allowPlayerPickSameChampion;
+        this.disallowBanningTeammateHoveredChampions = data.disallowBanningTeammateHoveredChampions;
+        this.queueId = data.queueId;
+        this.id = data.id;
+        this.trades = data.trades;
+        this.positionSwaps = data.positionSwaps;
 
         for (let actionGroup of this.actions)
             for (let action of actionGroup) {
@@ -93,8 +105,6 @@ export default class ChampSelectSession implements LCUEndpointResponseType<"get"
             }
     }
     
-
-
     getPickedChampionIds(): number[] {
         let picked: number[] = [];
 
