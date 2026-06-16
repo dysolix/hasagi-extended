@@ -119,8 +119,6 @@ export class HasagiClient extends TypedEmitter<Hasagi.Events> {
   public readonly getPassword = this.coreClient.getPassword.bind(this.coreClient);
   public readonly getPort = this.coreClient.getPort.bind(this.coreClient);
   public readonly getHostWithAuthentication = this.coreClient.getHostWithAuthentication.bind(this.coreClient);
-  /** @deprecated Misnamed (returns the host with authentication, not a protocol). Use {@link getHostWithAuthentication}. */
-  public readonly getProtocol = this.coreClient.getHostWithAuthentication.bind(this.coreClient);
 
   public readonly setDefaultRetryOptions = this.coreClient.setDefaultRetryOptions.bind(this.coreClient);
 
