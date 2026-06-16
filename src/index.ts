@@ -1,8 +1,8 @@
-import { HasagiClient as CoreClient, LCUEndpointBodyType, LCUEndpointResponseType, LCUTypes } from "@hasagi/core"
+import { HasagiClient as CoreClient, LCUEndpointBodyType, LCUEndpointResponseType, LCUTypes } from "@hasagi/core";
 import ChampSelectSession from "./classes/champ-select-session.js";
 import type Hasagi from "./types";
 import { TypedEmitter } from "tiny-typed-emitter";
-export type { Hasagi }
+export type { Hasagi };
 
 export * as Constants from "./constants.js";
 export { ChampSelectSession };
@@ -40,9 +40,9 @@ export class HasagiClient extends TypedEmitter<Hasagi.Events> {
           this.emit("rune-pages-update", this.runePages);
         }),
         this.getGameflowSession().then(async gameflowSession => {
-          this.gameflowSession = gameflowSession
-          this.emit("gameflow-session-update", this.gameflowSession)
-          this.emit("gameflow-phase-update", this.gameflowSession?.phase ?? "None")
+          this.gameflowSession = gameflowSession;
+          this.emit("gameflow-session-update", this.gameflowSession);
+          this.emit("gameflow-phase-update", this.gameflowSession?.phase ?? "None");
         }),
         this.ChampSelect.getSession().then(session => {
           this.champSelectSession = session;
@@ -52,7 +52,9 @@ export class HasagiClient extends TypedEmitter<Hasagi.Events> {
         this.getClientRegion().then(regionLocale => {
           this.regionLocale = regionLocale;
         }),
-        this.Lobby.getLobby().then(lobby => { this.emit("lobby-update", lobby) }),
+        this.Lobby.getLobby().then(lobby => {
+          this.emit("lobby-update", lobby);
+        }),
         this.request("get", "/lol-end-of-game/v1/eog-stats-block").then(r => this.emit("end-of-game-data-received", r)),
       ]);
 
@@ -73,58 +75,60 @@ export class HasagiClient extends TypedEmitter<Hasagi.Events> {
     });
 
     this.addLCUEventListener({
-      //name: "OnJsonApiEvent_lol-lobby_v2_lobby",
+      // name: "OnJsonApiEvent_lol-lobby_v2_lobby",
       path: "/lol-lobby/v2/lobby",
-      callback: (e) => this.onLobbyUpdate(e)
+      callback: (e) => this.onLobbyUpdate(e),
     });
 
     this.addLCUEventListener({
-      //name: "OnJsonApiEvent_lol-end-of-game_v1_eog-stats-block",
+      // name: "OnJsonApiEvent_lol-end-of-game_v1_eog-stats-block",
       path: "/lol-end-of-game/v1/eog-stats-block",
-      callback: (e) => this.onEndOfGameDataReceived(e)
-    })
+      callback: (e) => this.onEndOfGameDataReceived(e),
+    });
 
     this.addLCUEventListener({
-      //name: "OnJsonApiEvent_lol-matchmaking_v1_search",
+      // name: "OnJsonApiEvent_lol-matchmaking_v1_search",
       path: "/lol-matchmaking/v1/search",
-      callback: (e) => this.onMatchmakingSearchStateUpdate(e)
-    })
+      callback: (e) => this.onMatchmakingSearchStateUpdate(e),
+    });
 
     this.addLCUEventListener({
-      //name: "OnJsonApiEvent_lol-champ-select_v1_session",
+      // name: "OnJsonApiEvent_lol-champ-select_v1_session",
       path: "/lol-champ-select/v1/session",
-      callback: (e) => this.onChampSelectSessionUpdate(e)
+      callback: (e) => this.onChampSelectSessionUpdate(e),
     });
 
     this.addLCUEventListener({
       path: "/lol-perks/v1/pages",
-      callback: (e) => this.onRunePagesUpdate(e)
+      callback: (e) => this.onRunePagesUpdate(e),
     });
 
     this.addLCUEventListener({
       path: "/lol-perks/v1/currentpage",
-      callback: (e) => this.onCurrentRunePageUpdate(e)
+      callback: (e) => this.onCurrentRunePageUpdate(e),
     });
 
     this.addLCUEventListener({
-      //name: "OnJsonApiEvent_lol-gameflow_v1_session",
+      // name: "OnJsonApiEvent_lol-gameflow_v1_session",
       path: "/lol-gameflow/v1/session",
-      callback: (e) => this.onGameflowSessionUpdate(e)
+      callback: (e) => this.onGameflowSessionUpdate(e),
     });
   }
 
-  public readonly getBasicAuthToken = this.coreClient.getBasicAuthToken.bind(this.coreClient)
+  public readonly getBasicAuthToken = this.coreClient.getBasicAuthToken.bind(this.coreClient);
   public readonly getPassword = this.coreClient.getPassword.bind(this.coreClient);
-  public readonly getPort = this.coreClient.getPort.bind(this.coreClient)
-  public readonly getProtocol = this.coreClient.getHostWithAuthentication.bind(this.coreClient)
+  public readonly getPort = this.coreClient.getPort.bind(this.coreClient);
+  public readonly getHostWithAuthentication = this.coreClient.getHostWithAuthentication.bind(this.coreClient);
+  /** @deprecated Misnamed (returns the host with authentication, not a protocol). Use {@link getHostWithAuthentication}. */
+  public readonly getProtocol = this.coreClient.getHostWithAuthentication.bind(this.coreClient);
 
   public readonly setDefaultRetryOptions = this.coreClient.setDefaultRetryOptions.bind(this.coreClient);
 
-  public readonly connect = this.coreClient.connect.bind(this.coreClient)
+  public readonly connect = this.coreClient.connect.bind(this.coreClient);
 
   public readonly request: CoreClient["request"] = this.coreClient.request.bind(this.coreClient);
   public readonly poll: CoreClient["poll"] = this.coreClient.poll.bind(this.coreClient);
-  public readonly buildRequest: CoreClient["buildRequest"] = this.coreClient.buildRequest.bind(this.coreClient)
+  public readonly buildRequest: CoreClient["buildRequest"] = this.coreClient.buildRequest.bind(this.coreClient);
 
   public readonly addLCUEventListener = this.coreClient.addLCUEventListener.bind(this.coreClient);
   public readonly removeLCUEventListener = this.coreClient.removeLCUEventListener.bind(this.coreClient);
@@ -133,20 +137,20 @@ export class HasagiClient extends TypedEmitter<Hasagi.Events> {
 
   public readonly ChampSelect = {
     getSession: this.buildRequest("get", "/lol-champ-select/v1/session", { transformResponse: res => new ChampSelectSession(res) }),
-    getPhase: () => this.ChampSelect.getSession().then(session => session.getPhase())
+    getPhase: () => this.ChampSelect.getSession().then(session => session.getPhase()),
   } as const;
 
-  public readonly getLobbyInvitations = this.buildRequest("get", "/lol-lobby/v2/received-invitations")
+  public readonly getLobbyInvitations = this.buildRequest("get", "/lol-lobby/v2/received-invitations");
   public readonly acceptLobbyInvitation = this.buildRequest("post", "/lol-lobby/v2/received-invitations/{invitationId}/accept");
   public readonly declineLobbyInvitation = this.buildRequest("post", "/lol-lobby/v2/received-invitations/{invitationId}/decline");
 
   public readonly Lobby = {
     getLobby: this.buildRequest("get", "/lol-lobby/v2/lobby"),
 
-    kickLobbyMember: this.buildRequest("post", `/lol-lobby/v2/lobby/members/{summonerId}/kick`),
-    promoteLobbyMember: this.buildRequest("post", `/lol-lobby/v2/lobby/members/{summonerId}/promote`),
-    grantLobbyMemberInvitePermission: this.buildRequest("post", `/lol-lobby/v2/lobby/members/{summonerId}/grant-invite`),
-    revokeLobbyMemberInvitePermission: this.buildRequest("post", `/lol-lobby/v2/lobby/members/{summonerId}/revoke-invite`),
+    kickLobbyMember: this.buildRequest("post", "/lol-lobby/v2/lobby/members/{summonerId}/kick"),
+    promoteLobbyMember: this.buildRequest("post", "/lol-lobby/v2/lobby/members/{summonerId}/promote"),
+    grantLobbyMemberInvitePermission: this.buildRequest("post", "/lol-lobby/v2/lobby/members/{summonerId}/grant-invite"),
+    revokeLobbyMemberInvitePermission: this.buildRequest("post", "/lol-lobby/v2/lobby/members/{summonerId}/revoke-invite"),
 
     sendInvitation: this.buildRequest("post", "/lol-lobby/v2/lobby/invitations"),
 
@@ -158,8 +162,8 @@ export class HasagiClient extends TypedEmitter<Hasagi.Events> {
   } as const;
 
   /** Using this to automatically accept a ready check is forbidden. */
-  public readonly acceptReadyCheck = this.buildRequest("post", "/lol-matchmaking/v1/ready-check/accept")
-  public readonly declineReadyCheck = this.buildRequest("post", "/lol-matchmaking/v1/ready-check/decline")
+  public readonly acceptReadyCheck = this.buildRequest("post", "/lol-matchmaking/v1/ready-check/accept");
+  public readonly declineReadyCheck = this.buildRequest("post", "/lol-matchmaking/v1/ready-check/decline");
 
   public readonly Runes = {
     getDisabledRunes: this.buildRequest("get", "/lol-perks/v1/perks/disabled"),
@@ -167,34 +171,34 @@ export class HasagiClient extends TypedEmitter<Hasagi.Events> {
     getSelectedRunePage: this.buildRequest("get", "/lol-perks/v1/currentpage"),
 
     createRunePage: this.buildRequest("post", "/lol-perks/v1/pages"),
-    getRunePage: this.buildRequest("get", `/lol-perks/v1/pages/{id}`),
-    deleteRunePage: this.buildRequest("delete", `/lol-perks/v1/pages/{id}`),
+    getRunePage: this.buildRequest("get", "/lol-perks/v1/pages/{id}"),
+    deleteRunePage: this.buildRequest("delete", "/lol-perks/v1/pages/{id}"),
     replaceRunePage: (id: number, runePage: Partial<LCUEndpointBodyType<"post", "/lol-perks/v1/pages">>) => this.Runes.deleteRunePage(id).then(() => this.Runes.createRunePage(runePage as any)),
 
     getRunePages: this.buildRequest("get", "/lol-perks/v1/pages"),
-  } as const
+  } as const;
 
   public readonly Inventory = {
-    getOwnedSkins: this.buildRequest("get", `/lol-champions/v1/inventories/{summonerId}/skins-minimal`, {
+    getOwnedSkins: this.buildRequest("get", "/lol-champions/v1/inventories/{summonerId}/skins-minimal", {
       transformParameters: async () => {
         const summoner = await this.getLocalSummoner();
         return [summoner.summonerId] as const;
       },
-      transformResponse: res => res.filter(s => s.ownership.owned)
+      transformResponse: res => res.filter(s => s.ownership.owned),
     }),
-    getAllSkins: this.buildRequest("get", `/lol-champions/v1/inventories/{summonerId}/skins-minimal`, {
+    getAllSkins: this.buildRequest("get", "/lol-champions/v1/inventories/{summonerId}/skins-minimal", {
       transformParameters: async () => {
         const summoner = await this.getLocalSummoner();
         return [summoner.summonerId] as const;
-      }
+      },
     }),
 
-    getOwnedChampions: this.buildRequest("get", `/lol-champions/v1/owned-champions-minimal`),
-    getAllChampions: this.buildRequest("get", `/lol-champions/v1/inventories/{summonerId}/champions`, {
+    getOwnedChampions: this.buildRequest("get", "/lol-champions/v1/owned-champions-minimal"),
+    getAllChampions: this.buildRequest("get", "/lol-champions/v1/inventories/{summonerId}/champions", {
       transformParameters: async () => {
         const summoner = await this.getLocalSummoner();
         return [summoner.summonerId] as const;
-      }
+      },
     }),
 
     setLittleLegend: this.buildRequest("put", "/lol-cosmetics/v1/selection/companion"),
@@ -211,45 +215,47 @@ export class HasagiClient extends TypedEmitter<Hasagi.Events> {
       transformParameters: async (body: LCUTypes.LolLoadoutsUpdateLoadoutDTO["loadout"]) => {
         let accountLoadout = await this.Inventory.getAccountLoadout() as LCUEndpointResponseType<"get", "/lol-loadouts/v4/loadouts/scope/account">[number];
         return [accountLoadout.id, { ...accountLoadout, loadout: { ...accountLoadout.loadout, ...body } }] as const;
-      }
+      },
     }),
 
-    setProfileIcon: this.buildRequest("put", "/lol-summoner/v1/current-summoner/icon", { transformParameters: (iconId: number) => [{ profileIconId: iconId } as any] as const })
-  } as const
+    setProfileIcon: this.buildRequest("put", "/lol-summoner/v1/current-summoner/icon", { transformParameters: (iconId: number) => [{ profileIconId: iconId } as any] as const }),
+  } as const;
 
-  public readonly getLocalSummoner = this.buildRequest("get", "/lol-summoner/v1/current-summoner")
-  public readonly getLocalSummonerRankedData = this.buildRequest("get", "/lol-ranked/v1/current-ranked-stats")
+  public readonly getLocalSummoner = this.buildRequest("get", "/lol-summoner/v1/current-summoner");
+  public readonly getLocalSummonerRankedData = this.buildRequest("get", "/lol-ranked/v1/current-ranked-stats");
 
-  public readonly getSummonerByRiotId = this.buildRequest("get", `/lol-summoner/v1/alias/lookup`)
-  public readonly getSummonerById = this.buildRequest("get", `/lol-summoner/v1/summoners/{id}`)
-  public readonly getSummonersByIds = this.buildRequest("get", `/lol-summoner/v2/summoners`)
-  public readonly getCachedSummonerByPuuid = this.buildRequest("get", `/lol-summoner/v1/summoners-by-puuid-cached/{puuid}`)
+  public readonly getSummonerByRiotId = this.buildRequest("get", "/lol-summoner/v1/alias/lookup");
+  public readonly getSummonerById = this.buildRequest("get", "/lol-summoner/v1/summoners/{id}");
+  public readonly getSummonersByIds = this.buildRequest("get", "/lol-summoner/v2/summoners");
+  public readonly getCachedSummonerByPuuid = this.buildRequest("get", "/lol-summoner/v1/summoners-by-puuid-cached/{puuid}");
 
-  public readonly downloadReplay = this.buildRequest("post", `/lol-replays/v1/rofls/{gameId}/download`, { transformParameters: (gameId: number) => [gameId, { componentType: "replay-button_match-history" }] as const })
+  public readonly downloadReplay = this.buildRequest("post", "/lol-replays/v1/rofls/{gameId}/download", { transformParameters: (gameId: number) => [gameId, { componentType: "replay-button_match-history" }] as const });
 
-  public readonly watchReplay = this.buildRequest("post", `/lol-replays/v1/rofls/{gameId}/watch`, { transformParameters: (gameId: number) => [gameId, { componentType: "replay-button_match-history" }] as const })
+  public readonly watchReplay = this.buildRequest("post", "/lol-replays/v1/rofls/{gameId}/watch", { transformParameters: (gameId: number) => [gameId, { componentType: "replay-button_match-history" }] as const });
 
-  public readonly getGameflowSession = this.buildRequest("get", "/lol-gameflow/v1/session")
-  public readonly getGameflowPhase = this.buildRequest("get", "/lol-gameflow/v1/gameflow-phase")
+  public readonly getGameflowSession = this.buildRequest("get", "/lol-gameflow/v1/session");
+  public readonly getGameflowPhase = this.buildRequest("get", "/lol-gameflow/v1/gameflow-phase");
 
-  public readonly getMatchmakingSearchState = this.buildRequest("get", "/lol-matchmaking/v1/search")
+  public readonly getMatchmakingSearchState = this.buildRequest("get", "/lol-matchmaking/v1/search");
 
-  public readonly getClientRegion = this.buildRequest("get", "/riotclient/region-locale")
+  public readonly getClientRegion = this.buildRequest("get", "/riotclient/region-locale");
 
   public readonly sendNotification = this.buildRequest("post", "/player-notifications/v1/notifications", {
-    transformParameters(title: string, message: string, options?: { backgroundUrl?: string, iconUrl?: string }) {
-      return [{
-        detailKey: "pre_translated_details",
-        titleKey: "pre_translated_title",
-        data: {
-          title,
-          details: message
-        },
-        backgroundUrl: options?.backgroundUrl,
-        iconUrl: options?.iconUrl,
-      } as unknown as LCUTypes.PlayerNotificationsPlayerNotificationResource] as const;
+    transformParameters(title: string, message: string, options?: { backgroundUrl?: string; iconUrl?: string }) {
+      return [
+        {
+          detailKey: "pre_translated_details",
+          titleKey: "pre_translated_title",
+          data: {
+            title,
+            details: message,
+          },
+          backgroundUrl: options?.backgroundUrl,
+          iconUrl: options?.iconUrl,
+        } as unknown as LCUTypes.PlayerNotificationsPlayerNotificationResource,
+      ] as const;
     },
-  })
+  });
 
   public readonly ItemSets = {
     getItemSets: this.buildRequest("get", "/lol-item-sets/v1/item-sets/{summonerId}/sets", { transformParameters: async () => [await this.getLocalSummoner().then(summoner => summoner.summonerId)] as const }),
@@ -263,13 +269,13 @@ export class HasagiClient extends TypedEmitter<Hasagi.Events> {
         } else {
           return [summoner.summonerId, itemSets] as const;
         }
-      }
+      },
     }),
     deleteItemSet: (uid: string) => this.ItemSets.getItemSets().then(itemSets => this.ItemSets.setItemSets(itemSets.itemSets.filter(i => i.uid !== uid))),
-    addItemSet: (itemSet: LCUEndpointResponseType<"get", "/lol-item-sets/v1/item-sets/{summonerId}/sets">["itemSets"][number]) => this.ItemSets.getItemSets().then(itemSets => this.ItemSets.setItemSets({ ...itemSets, itemSets: [...itemSets.itemSets, itemSet] }))
+    addItemSet: (itemSet: LCUEndpointResponseType<"get", "/lol-item-sets/v1/item-sets/{summonerId}/sets">["itemSets"][number]) => this.ItemSets.getItemSets().then(itemSets => this.ItemSets.setItemSets({ ...itemSets, itemSets: [...itemSets.itemSets, itemSet] })),
   } as const;
 
-  //#region EventHandler
+  // #region EventHandler
   private onChampSelectSessionUpdate(event: LCUTypes.PluginResourceEvent<unknown>) {
     if (event.eventType === "Delete") {
       this.champSelectSession = null;
@@ -291,28 +297,31 @@ export class HasagiClient extends TypedEmitter<Hasagi.Events> {
         this.emit("champ-select-local-player-ban-turn", newSessionData.ownBanActionId);
       }
       if (newSessionData.inProgressActionIds.includes(newSessionData.ownPickActionId) && !oldSessionData.inProgressActionIds.includes(newSessionData.ownPickActionId)) {
-        this.emit("champ-select-local-player-pick-turn", newSessionData.ownPickActionId)
+        this.emit("champ-select-local-player-pick-turn", newSessionData.ownPickActionId);
       }
 
       if (!oldSessionData.getActionById(oldSessionData.ownBanActionId)?.completed && newSessionData.getActionById(newSessionData.ownBanActionId)?.completed) {
         this.emit("champ-select-local-player-ban-completed", newSessionData.getActionById(newSessionData.ownBanActionId)!.championId);
       }
 
-      const changedPickIntents: { puuid: string, previousPickIntent: number, pickIntent: number }[] = [];
+      const changedPickIntents: { puuid: string; previousPickIntent: number; pickIntent: number }[] = [];
       newSessionData.myTeam.forEach((p, index) => {
-        const previousPickIntent = oldSessionData!.myTeam[index].championId !== 0 ? oldSessionData!.myTeam[index].championId : oldSessionData!.myTeam[index].championPickIntent;
+        // Team sizes can differ between sessions; skip members without an old counterpart.
+        const previousMember = oldSessionData!.myTeam[index];
+        if (!previousMember) return;
+        const previousPickIntent = previousMember.championId !== 0 ? previousMember.championId : previousMember.championPickIntent;
         const pickIntent = p.championId !== 0 ? p.championId : p.championPickIntent;
 
         if (previousPickIntent !== pickIntent) {
           changedPickIntents.push({
             puuid: p.puuid,
             previousPickIntent,
-            pickIntent
-          })
+            pickIntent,
+          });
         }
-      })
+      });
 
-      changedPickIntents.forEach(changedPickIntent => this.emit("champ-select-pick-intent-change", changedPickIntent.puuid, changedPickIntent.pickIntent))
+      changedPickIntents.forEach(changedPickIntent => this.emit("champ-select-pick-intent-change", changedPickIntent.puuid, changedPickIntent.pickIntent));
 
     } else {
       this.emit("champ-select-phase-update", newSessionData.getPhase());
@@ -321,7 +330,7 @@ export class HasagiClient extends TypedEmitter<Hasagi.Events> {
     const oldLocalPlayerData = oldSessionData?.getLocalPlayer() ?? null;
     const newLocalPlayerData = newSessionData.getLocalPlayer();
     const oldLocalPlayerPickAction = oldSessionData?.getActionById(oldSessionData.ownPickActionId) ?? null;
-    const newLocalPlayerPickAction = newSessionData.getActionById(newSessionData.ownPickActionId)
+    const newLocalPlayerPickAction = newSessionData.getActionById(newSessionData.ownPickActionId);
 
     if (oldLocalPlayerPickAction === null && newLocalPlayerPickAction === null && (newLocalPlayerData?.championId ?? 0) !== (oldLocalPlayerData?.championId ?? 0))
       this.emit("champ-select-local-player-pick-completed", newLocalPlayerData!.championId);
@@ -333,15 +342,12 @@ export class HasagiClient extends TypedEmitter<Hasagi.Events> {
 
   private onRunePagesUpdate(event: LCUTypes.PluginResourceEvent<unknown>) {
     if (event.eventType === "Update") {
-      let runes: any[] = event.data as any;
-      const oldRunes = this.runePages;
-      this.runePages = runes;
+      this.runePages = event.data as any;
       this.emit("rune-pages-update", this.runePages);
     }
   }
 
   private onCurrentRunePageUpdate(event: LCUTypes.PluginResourceEvent<unknown>) {
-    const oldRunes = this.runePages.map(runePage => ({ ...runePage }))
     let updatedRunePage = event.data as any;
     let index = this.runePages.findIndex(rp => rp.id === updatedRunePage.id);
     let currentIndex = this.runePages.findIndex(rp => rp.current);
@@ -418,120 +424,5 @@ export class HasagiClient extends TypedEmitter<Hasagi.Events> {
     }
   }
 
-
-  private updateLobby(lobby: Hasagi.Lobby) {
-    const localPlayerTeamId = lobby.localMember.teamId;
-    const maxMembers = lobby.gameConfig.maxHumanPlayers || lobby.gameConfig.maxLobbySize;
-    const curMembers = lobby.members.length;
-    const teamMembers = lobby.members.filter(m => m.teamId === localPlayerTeamId);
-    const enemyTeamMembers = lobby.members.filter(m => m.teamId !== localPlayerTeamId);
-
-    const queueId = lobby.gameConfig.queueId;
-    const isCustom = lobby.gameConfig.isCustom;
-    const gameMode = lobby.gameConfig.gameMode;
-    const firstPositionPreference = lobby.localMember.firstPositionPreference;
-    const secondPositionPreference = lobby.localMember.secondPositionPreference;
-
-    function mapMember(member: LCUTypes.LolLobbyLobbyParticipantDto) {
-      return {
-        puuid: member.puuid,
-        summonerId: member.summonerId,
-        isBot: member.isBot,
-        championId: member.botChampionId,
-        botId: member.botUuid
-      }
-    }
-
-    const lobbyData = {
-      queueId,
-      gameMode,
-
-      isCustom,
-
-      firstPositionPreference,
-      secondPositionPreference,
-
-      currentMemberCount: curMembers,
-      maximumMemberCount: maxMembers,
-      members: lobby.members.map(mapMember),
-      teamMembers: teamMembers.map(mapMember),
-      enemyTeamMembers: enemyTeamMembers.map(mapMember)
-    }
-  }
-
-  //#endregion
-}
-
-class GameMode {
-  public static readonly Quickplay = new GameMode({ displayName: "Quickplay", queueId: 187 });
-  public static readonly NormalDraft = new GameMode({ displayName: "Normal • Draft", queueId: 187 });
-
-  public static readonly RankedSolo = new GameMode({ displayName: "Ranked Solo/Duo", queueId: 420 });
-  public static readonly RankedFlex = new GameMode({ displayName: "Ranked Flex", queueId: 440 });
-
-  public static readonly ARAM = new GameMode({ displayName: "ARAM", queueId: 450 });
-
-  public static readonly Arena = new GameMode({ displayName: "Arena", queueId: 1710 });
-
-  public static readonly SwarmSolo = new GameMode({ displayName: "Swarm", queueId: 1810 });
-  public static readonly SwarmDuo = new GameMode({ displayName: "Swarm", queueId: 1820 });
-  public static readonly SwarmTrio = new GameMode({ displayName: "Swarm", queueId: 1830 });
-  public static readonly SwarmSquad = new GameMode({ displayName: "Swarm", queueId: 1840 });
-
-  public static readonly TFTNormal = new GameMode({ displayName: "Teamfight Tactics • Normal", queueId: 1090 });
-  public static readonly TFTRanked = new GameMode({ displayName: "Teamfight Tactics • Ranked", queueId: 1100 });
-  public static readonly TFTDoubleUp = new GameMode({ displayName: "Teamfight Tactics • Double Up", queueId: 1160 });
-  public static readonly TFTHyperRoll = new GameMode({ displayName: "Teamfight Tactics • Hyper Roll", queueId: 1130 });
-
-  public static readonly PracticeTool = new GameMode({ displayName: "Practice Tool", gameMode: "PRACTICETOOL" });
-
-  private constructor(input: { queueId?: number, gameMode?: string, displayName: string }) {
-
-  }
-
-  public static resolve(input: { isCustom?: boolean, gameMode?: string, queueId?: number }) {
-    let mode: string;
-    if(input.gameMode === "PRACTICETOOL")
-      mode = "Practice Tool"
-    else if (input.isCustom)
-      mode = `Custom`;
-    else
-      switch (input.gameMode) {
-        case "CLASSIC":
-          mode = "Normal";
-          break;
-        case "ARAM":
-          mode = "ARAM";
-          break;
-        case "TUTORIAL":
-          mode = "Tutorial";
-          break;
-        case "URF":
-          mode = "URF";
-          break;
-        case "ONEFORALL":
-          mode = "One for All";
-          break
-        case "GAMEMODEX":
-          mode = "Nexus Blitz";
-          break;
-        case "NEXUSBLITZ":
-          mode = "Nexus Blitz";
-          break;
-        case "ULTBOOK":
-          mode = "Ultimate Spellbook";
-          break;
-        case "TFT":
-          mode = "TFT";
-          break;
-        case "CHERRY":
-          mode = "Arena";
-          break;
-        case "STRAWBERRY":
-          mode = "Swarm";
-        default:
-          mode = input.gameMode ?? "";
-          break;
-      }
-  }
+  // #endregion
 }

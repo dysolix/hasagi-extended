@@ -1,207 +1,207 @@
 import { LCUEndpointResponseType, LCUTypes } from "@hasagi/core";
 
 export default class ChampSelectSession implements LCUEndpointResponseType<"get", "/lol-champ-select/v1/session"> {
-    gameId: number;
-    actions: {
-        actorCellId: number;
-        championId: number;
-        completed: boolean;
-        id: number;
-        isAllyAction: boolean;
-        isInProgress: boolean;
-        type: "ban" | "pick" | "ten_bans_reveal";
-    }[][];
-    localPlayerCellId: number;
-    isSpectating: boolean;
-    allowSkinSelection: boolean;
-    allowDuplicatePicks: boolean;
-    allowBattleBoost: boolean;
-    boostableSkinCount: number;
-    allowRerolling: boolean;
-    rerollsRemaining: number;
-    allowLockedEvents: boolean;
-    lockedEventIndex: number;
-    benchEnabled: boolean;
-    counter: number;
-    skipChampionSelect: boolean;
-    hasSimultaneousBans: boolean;
-    hasSimultaneousPicks: boolean;
-    isCustomGame: boolean;
+  gameId: number;
+  actions: {
+    actorCellId: number;
+    championId: number;
+    completed: boolean;
+    id: number;
+    isAllyAction: boolean;
+    isInProgress: boolean;
+    type: "ban" | "pick" | "ten_bans_reveal";
+  }[][];
+  localPlayerCellId: number;
+  isSpectating: boolean;
+  allowSkinSelection: boolean;
+  allowDuplicatePicks: boolean;
+  allowBattleBoost: boolean;
+  boostableSkinCount: number;
+  allowRerolling: boolean;
+  rerollsRemaining: number;
+  allowLockedEvents: boolean;
+  lockedEventIndex: number;
+  benchEnabled: boolean;
+  counter: number;
+  skipChampionSelect: boolean;
+  hasSimultaneousBans: boolean;
+  hasSimultaneousPicks: boolean;
+  isCustomGame: boolean;
 
-    ownBanActionId: number;
-    ownPickActionId: number;
-    inProgressActionIds: number[];
+  ownBanActionId: number;
+  ownPickActionId: number;
+  inProgressActionIds: number[];
 
-    showQuitButton: boolean;
-    isLegacyChampSelect: boolean;
+  showQuitButton: boolean;
+  isLegacyChampSelect: boolean;
 
-    allowSubsetChampionPicks: boolean;
-    allowPlayerPickSameChampion: boolean;
-    disallowBanningTeammateHoveredChampions: boolean;
-    queueId: number;
+  allowSubsetChampionPicks: boolean;
+  allowPlayerPickSameChampion: boolean;
+  disallowBanningTeammateHoveredChampions: boolean;
+  queueId: number;
 
-    bans: LCUTypes.TeamBuilderDirect_ChampSelectBannedChampions;
-    id: string;
-    timer: LCUTypes.TeamBuilderDirect_TeambuilderDirectTypes_ChampSelectTimer;
-    chatDetails: LCUTypes.TeamBuilderDirect_ChampSelectChatRoomDetails;
-    myTeam: LCUTypes.TeamBuilderDirect_ChampSelectPlayerSelection[];
-    theirTeam: LCUTypes.TeamBuilderDirect_ChampSelectPlayerSelection[];
-    trades: LCUTypes.TeamBuilderDirect_ChampSelectSwapContract[];
-    pickOrderSwaps: LCUTypes.TeamBuilderDirect_ChampSelectSwapContract[];
-    positionSwaps: LCUTypes.TeamBuilderDirect_ChampSelectSwapContract[];
-    benchChampions: LCUTypes.TeamBuilderDirect_BenchChampion[];
+  bans: LCUTypes.TeamBuilderDirect_ChampSelectBannedChampions;
+  id: string;
+  timer: LCUTypes.TeamBuilderDirect_TeambuilderDirectTypes_ChampSelectTimer;
+  chatDetails: LCUTypes.TeamBuilderDirect_ChampSelectChatRoomDetails;
+  myTeam: LCUTypes.TeamBuilderDirect_ChampSelectPlayerSelection[];
+  theirTeam: LCUTypes.TeamBuilderDirect_ChampSelectPlayerSelection[];
+  trades: LCUTypes.TeamBuilderDirect_ChampSelectSwapContract[];
+  pickOrderSwaps: LCUTypes.TeamBuilderDirect_ChampSelectSwapContract[];
+  positionSwaps: LCUTypes.TeamBuilderDirect_ChampSelectSwapContract[];
+  benchChampions: LCUTypes.TeamBuilderDirect_BenchChampion[];
 
-    constructor(data: LCUEndpointResponseType<"get", "/lol-champ-select/v1/session">) {
-        this.ownBanActionId = -1;
-        this.ownPickActionId = -1;
-        this.inProgressActionIds = [];
+  constructor(data: LCUEndpointResponseType<"get", "/lol-champ-select/v1/session">) {
+    this.ownBanActionId = -1;
+    this.ownPickActionId = -1;
+    this.inProgressActionIds = [];
 
-        this.actions = data.actions as any;
-        this.allowBattleBoost = data.allowBattleBoost;
-        this.allowDuplicatePicks = data.allowDuplicatePicks;
-        this.allowLockedEvents = data.allowLockedEvents;
-        this.allowRerolling = data.allowRerolling;
-        this.allowSkinSelection = data.allowSkinSelection;
-        this.benchChampions = data.benchChampions;
-        this.benchEnabled = data.benchEnabled;
-        this.boostableSkinCount = data.boostableSkinCount;
-        this.chatDetails = data.chatDetails;
-        this.counter = data.counter;
-        this.gameId = data.gameId;
-        this.hasSimultaneousBans = data.hasSimultaneousBans;
-        this.hasSimultaneousPicks = data.hasSimultaneousPicks;
-        this.isSpectating = data.isSpectating;
-        this.localPlayerCellId = data.localPlayerCellId;
-        this.lockedEventIndex = data.lockedEventIndex;
-        this.myTeam = data.myTeam;
-        this.rerollsRemaining = data.rerollsRemaining;
-        this.skipChampionSelect = data.skipChampionSelect;
-        this.theirTeam = data.theirTeam;
-        this.timer = data.timer;
-        this.isCustomGame = data.isCustomGame;
-        this.bans = data.bans;
-        this.pickOrderSwaps = data.pickOrderSwaps;
-        this.showQuitButton = data.showQuitButton;
-        this.isLegacyChampSelect = data.isLegacyChampSelect;
-        this.allowSubsetChampionPicks = data.allowSubsetChampionPicks;
-        this.allowPlayerPickSameChampion = data.allowPlayerPickSameChampion;
-        this.disallowBanningTeammateHoveredChampions = data.disallowBanningTeammateHoveredChampions;
-        this.queueId = data.queueId;
-        this.id = data.id;
-        this.trades = data.trades;
-        this.positionSwaps = data.positionSwaps;
+    this.actions = data.actions as any;
+    this.allowBattleBoost = data.allowBattleBoost;
+    this.allowDuplicatePicks = data.allowDuplicatePicks;
+    this.allowLockedEvents = data.allowLockedEvents;
+    this.allowRerolling = data.allowRerolling;
+    this.allowSkinSelection = data.allowSkinSelection;
+    this.benchChampions = data.benchChampions;
+    this.benchEnabled = data.benchEnabled;
+    this.boostableSkinCount = data.boostableSkinCount;
+    this.chatDetails = data.chatDetails;
+    this.counter = data.counter;
+    this.gameId = data.gameId;
+    this.hasSimultaneousBans = data.hasSimultaneousBans;
+    this.hasSimultaneousPicks = data.hasSimultaneousPicks;
+    this.isSpectating = data.isSpectating;
+    this.localPlayerCellId = data.localPlayerCellId;
+    this.lockedEventIndex = data.lockedEventIndex;
+    this.myTeam = data.myTeam;
+    this.rerollsRemaining = data.rerollsRemaining;
+    this.skipChampionSelect = data.skipChampionSelect;
+    this.theirTeam = data.theirTeam;
+    this.timer = data.timer;
+    this.isCustomGame = data.isCustomGame;
+    this.bans = data.bans;
+    this.pickOrderSwaps = data.pickOrderSwaps;
+    this.showQuitButton = data.showQuitButton;
+    this.isLegacyChampSelect = data.isLegacyChampSelect;
+    this.allowSubsetChampionPicks = data.allowSubsetChampionPicks;
+    this.allowPlayerPickSameChampion = data.allowPlayerPickSameChampion;
+    this.disallowBanningTeammateHoveredChampions = data.disallowBanningTeammateHoveredChampions;
+    this.queueId = data.queueId;
+    this.id = data.id;
+    this.trades = data.trades;
+    this.positionSwaps = data.positionSwaps;
 
-        for (let actionGroup of this.actions)
-            for (let action of actionGroup) {
-                if (action.isInProgress)
-                    this.inProgressActionIds.push(action.id);
-                if (action.actorCellId === data.localPlayerCellId) {
-                    if (action.type === "ban") {
-                        this.ownBanActionId = action.id;
-                    } else if (action.type === "pick") {
-                        this.ownPickActionId = action.id;
-                    }
-                }
-            }
-    }
-    
-    getPickedChampionIds(): number[] {
-        let picked: number[] = [];
+    for (let actionGroup of this.actions)
+      for (let action of actionGroup) {
+        if (action.isInProgress)
+          this.inProgressActionIds.push(action.id);
+        if (action.actorCellId === data.localPlayerCellId) {
+          if (action.type === "ban") {
+            this.ownBanActionId = action.id;
+          } else if (action.type === "pick") {
+            this.ownPickActionId = action.id;
+          }
+        }
+      }
+  }
 
-        for (let actionGroup of this.actions)
-            for (let action of actionGroup)
-                if (action.type === "pick" && !picked.includes(action.championId)) {
-                    picked.push(Number(action.championId));
-                }
+  getPickedChampionIds(): number[] {
+    let picked: number[] = [];
 
-        return picked;
-    }
-
-    getBannedChampionIds(): number[] {
-        let banned: number[] = [];
-
-        for (let actionGroup of this.actions)
-            for (let action of actionGroup)
-                if (action.type === "ban" && !banned.includes(action.championId)) {
-                    banned.push(Number(action.championId));
-                }
-
-        return banned;
-    }
-
-    getPhase(): 'PLANNING' | 'BAN_PICK' | 'FINALIZATION' | '' {
-        return this.timer.phase as any;
-    }
-
-    isBanPhase() {
-        for (let actionId of this.inProgressActionIds) {
-            let action = this.getActionById(actionId);
-            if (action?.isInProgress && action?.type === "ban" && !action?.completed)
-                return true;
+    for (let actionGroup of this.actions)
+      for (let action of actionGroup)
+        if (action.type === "pick" && !picked.includes(action.championId)) {
+          picked.push(Number(action.championId));
         }
 
-        return false;
-    }
+    return picked;
+  }
 
-    isPickPhase() {
-        for (let actionId of this.inProgressActionIds) {
-            let action = this.getActionById(actionId);
-            if (action?.isInProgress && action?.type === "pick" && !action?.completed)
-                return true;
+  getBannedChampionIds(): number[] {
+    let banned: number[] = [];
+
+    for (let actionGroup of this.actions)
+      for (let action of actionGroup)
+        if (action.type === "ban" && !banned.includes(action.championId)) {
+          banned.push(Number(action.championId));
         }
 
-        return false;
+    return banned;
+  }
+
+  getPhase(): "PLANNING" | "BAN_PICK" | "FINALIZATION" | "" {
+    return this.timer.phase as any;
+  }
+
+  isBanPhase() {
+    for (let actionId of this.inProgressActionIds) {
+      let action = this.getActionById(actionId);
+      if (action?.isInProgress && action?.type === "ban" && !action?.completed)
+        return true;
     }
 
-    isDraft() {
-        return !this.hasSimultaneousPicks;
+    return false;
+  }
+
+  isPickPhase() {
+    for (let actionId of this.inProgressActionIds) {
+      let action = this.getActionById(actionId);
+      if (action?.isInProgress && action?.type === "pick" && !action?.completed)
+        return true;
     }
 
-    getActionById(id: number) {
-        for (let actionGroup of this.actions)
-            for (let action of actionGroup)
-                if (action.id == id)
-                    return action;
+    return false;
+  }
 
-        return null;
+  isDraft() {
+    return !this.hasSimultaneousPicks;
+  }
+
+  getActionById(id: number) {
+    for (let actionGroup of this.actions)
+      for (let action of actionGroup)
+        if (action.id == id)
+          return action;
+
+    return null;
+  }
+
+  getTenBansRevealAction() {
+    for (let actionGroup of this.actions)
+      for (let action of actionGroup)
+        if (action.type === "ten_bans_reveal")
+          return action;
+
+    return null;
+  }
+
+  getTeamMemberByPosition(position: "top" | "jungle" | "middle" | "bottom" | "utility" | string) {
+    position = position.trim().toLowerCase();
+    if (position === "support")
+      position = "utility";
+    if (position === "mid")
+      position = "middle";
+    if (position === "adc")
+      position = "bottom";
+
+    for (let teamMember of this.myTeam) {
+      if (teamMember.assignedPosition === position)
+        return teamMember;
     }
 
-    getTenBansRevealAction() {
-        for (let actionGroup of this.actions)
-            for (let action of actionGroup)
-                if (action.type === "ten_bans_reveal")
-                    return action;
+    return null;
+  }
 
-        return null;
+  getTeamMemberByCellId(cellId: number) {
+    for (let teamMember of this.myTeam) {
+      if (teamMember.cellId === cellId)
+        return teamMember;
     }
 
-    getTeamMemberByPosition(position: 'top' | 'jungle' | 'middle' | 'bottom' | 'utility' | string) {
-        position = position.trim().toLowerCase();
-        if (position === "support")
-            position = "utility";
-        if (position === "mid")
-            position = "middle";
-        if (position === "adc")
-            position = "bottom";
+    return null;
+  }
 
-        for (let teamMember of this.myTeam) {
-            if (teamMember.assignedPosition === position)
-                return teamMember;
-        }
-
-        return null;
-    }
-
-    getTeamMemberByCellId(cellId: number) {
-        for (let teamMember of this.myTeam) {
-            if (teamMember.cellId === cellId)
-                return teamMember;
-        }
-
-        return null;
-    }
-
-    getLocalPlayer() {
-        return this.getTeamMemberByCellId(this.localPlayerCellId);
-    }
+  getLocalPlayer() {
+    return this.getTeamMemberByCellId(this.localPlayerCellId);
+  }
 }
