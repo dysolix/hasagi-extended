@@ -5,7 +5,7 @@ import { TypedEmitter } from "tiny-typed-emitter";
 export type { Hasagi }
 
 export * as Constants from "./constants.js";
-export { default as ChampSelectSession } from "./classes/champ-select-session.js";
+export { ChampSelectSession };
 
 const delay = (ms: number) => new Promise<void>(resolve => setTimeout(resolve, ms));
 
@@ -535,5 +535,3 @@ class GameMode {
       }
   }
 }
-
-export default HasagiClient;
