@@ -17,8 +17,8 @@
     "hasagi"
   ],
   "dependencies": {
-    "@hasagi/core": "^0.6.8",
-    "tiny-typed-emitter": "^2.1.0"
+    "@hasagi/core": "0.7.0",
+    "tiny-typed-emitter": "2.1.0"
   },
   "devDependencies": {
     "@arethetypeswrong/cli": "^0.18.3",
