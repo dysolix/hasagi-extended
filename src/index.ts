@@ -1,7 +1,6 @@
 import { HasagiClient as CoreClient, LCUEndpointBodyType, LCUEndpointResponseType, LCUTypes } from "@hasagi/core";
 import ChampSelectSession from "./classes/champ-select-session.js";
 import type Hasagi from "./types";
-import { TypedEmitter } from "tiny-typed-emitter";
 export type { Hasagi };
 
 export * as Constants from "./constants.js";
@@ -9,26 +8,14 @@ export { ChampSelectSession };
 
 const delay = (ms: number) => new Promise<void>(resolve => setTimeout(resolve, ms));
 
-export class HasagiClient extends TypedEmitter<Hasagi.Events> {
-  /** Can't directly extend the core client because it messes up the typed events :( */
-  private readonly coreClient: CoreClient = new CoreClient();
-
-  public isConnected: boolean = false;
+export class HasagiClient extends CoreClient<Hasagi.Events> {
   public regionLocale: LCUEndpointResponseType<"get", "/riotclient/region-locale"> | null = null;
   public gameflowSession: LCUEndpointResponseType<"get", "/lol-gameflow/v1/session"> | null = null;
   public champSelectSession: ChampSelectSession | null = null;
   public runePages: LCUEndpointResponseType<"get", "/lol-perks/v1/pages"> = [];
 
   public constructor(...params: ConstructorParameters<typeof CoreClient>) {
-    super();
-
-    this.coreClient.setDefaultRetryOptions(params[0]?.defaultRetryOptions ?? null!);
-
-    this.coreClient.on("connected", () => this.emit("connected"));
-    this.coreClient.on("connecting", () => this.emit("connecting"));
-    this.coreClient.on("connection-attempt-failed", () => this.emit("connection-attempt-failed"));
-    this.coreClient.on("disconnected", () => this.emit("disconnected"));
-    this.coreClient.on("lcu-event", (e) => this.emit("lcu-event", e));
+    super(...params);
 
     this.on("connected", async () => {
       this.subscribeWebSocketEvent("OnJsonApiEvent");
@@ -58,8 +45,6 @@ export class HasagiClient extends TypedEmitter<Hasagi.Events> {
         this.request("get", "/lol-end-of-game/v1/eog-stats-block").then(r => this.emit("end-of-game-data-received", r)),
       ]);
 
-      this.isConnected = true;
-
       this.emit("ready");
       this.emit("connection-state-change", true);
     });
@@ -70,7 +55,6 @@ export class HasagiClient extends TypedEmitter<Hasagi.Events> {
       this.runePages = [];
       this.regionLocale = null;
 
-      this.isConnected = false;
       this.emit("connection-state-change", false);
     });
 
@@ -115,23 +99,6 @@ export class HasagiClient extends TypedEmitter<Hasagi.Events> {
     });
   }
 
-  public readonly getBasicAuthToken = this.coreClient.getBasicAuthToken.bind(this.coreClient);
-  public readonly getPassword = this.coreClient.getPassword.bind(this.coreClient);
-  public readonly getPort = this.coreClient.getPort.bind(this.coreClient);
-  public readonly getHostWithAuthentication = this.coreClient.getHostWithAuthentication.bind(this.coreClient);
-
-  public readonly setDefaultRetryOptions = this.coreClient.setDefaultRetryOptions.bind(this.coreClient);
-
-  public readonly connect = this.coreClient.connect.bind(this.coreClient);
-
-  public readonly request: CoreClient["request"] = this.coreClient.request.bind(this.coreClient);
-  public readonly poll: CoreClient["poll"] = this.coreClient.poll.bind(this.coreClient);
-  public readonly buildRequest: CoreClient["buildRequest"] = this.coreClient.buildRequest.bind(this.coreClient);
-
-  public readonly addLCUEventListener = this.coreClient.addLCUEventListener.bind(this.coreClient);
-  public readonly removeLCUEventListener = this.coreClient.removeLCUEventListener.bind(this.coreClient);
-  public readonly subscribeWebSocketEvent = this.coreClient.subscribeWebSocketEvent.bind(this.coreClient);
-  public readonly unsubscribeWebSocketEvent = this.coreClient.unsubscribeWebSocketEvent.bind(this.coreClient);
 
   public readonly ChampSelect = {
     getSession: this.buildRequest("get", "/lol-champ-select/v1/session", { transformResponse: res => new ChampSelectSession(res) }),
