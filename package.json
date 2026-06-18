@@ -8,6 +8,8 @@
     "check:package": "npm run build && publint ./dist && attw --pack ./dist",
     "lint": "eslint",
     "lint:fix": "eslint --fix",
+    "test": "npm run test:typecheck && vitest run",
+    "test:typecheck": "tsc -p tsconfig.test.json",
     "release": "npm run check:package && cd ./dist && npm publish --access public",
     "update-deps": "npm i @hasagi/core@latest"
   },
@@ -27,7 +29,8 @@
     "eslint": "^10.5.0",
     "publint": "^0.3.21",
     "typescript": "^6.0.3",
-    "typescript-eslint": "^8.61.0"
+    "typescript-eslint": "^8.61.0",
+    "vitest": "^4.1.8"
   },
   "exports": {
     ".": {

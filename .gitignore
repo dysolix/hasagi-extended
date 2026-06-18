@@ -4,4 +4,8 @@ dist
 /lcu-schema-gen/out/*
 !/lcu-schema-gen/out/.gitkeep
 !tsconfig.json
-tests
+
+# Legacy manual/scratch scripts at the top level of tests/ stay untracked;
+# the real Vitest suite under tests/unit/ is version-controlled.
+/tests/*.mjs
+/tests/*.ts
