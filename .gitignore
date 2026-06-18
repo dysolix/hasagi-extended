@@ -1,11 +1,5 @@
 node_modules
 dist
-/lcu-schema-gen/*.js
-/lcu-schema-gen/out/*
-!/lcu-schema-gen/out/.gitkeep
-!tsconfig.json
 
-# Legacy manual/scratch scripts at the top level of tests/ stay untracked;
-# the real Vitest suite under tests/unit/ is version-controlled.
+# Legacy test scripts 
 /tests/*.mjs
-/tests/*.ts
