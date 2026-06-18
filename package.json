@@ -24,7 +24,7 @@
     "hasagi"
   ],
   "dependencies": {
-    "@hasagi/core": "0.7.0",
+    "@hasagi/core": "0.8.0",
     "tiny-typed-emitter": "2.1.0"
   },
   "devDependencies": {
