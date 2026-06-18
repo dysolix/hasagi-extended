@@ -1,8 +1,11 @@
 import { LCUEndpointResponseType, LCUTypes } from "@hasagi/core";
 
 export default class ChampSelectSession implements LCUEndpointResponseType<"get", "/lol-champ-select/v1/session"> {
-  gameId: number;
-  actions: {
+  // Fields sourced verbatim from the endpoint payload are `declare`d (ambient): they carry no runtime
+  // initializer and are populated in one pass by `Object.assign(this, data)` in the constructor. The
+  // `implements` clause still forces this list to track the LCU type at compile time.
+  declare gameId: number;
+  declare actions: {
     actorCellId: number;
     championId: number;
     completed: boolean;
@@ -11,85 +14,57 @@ export default class ChampSelectSession implements LCUEndpointResponseType<"get"
     isInProgress: boolean;
     type: "ban" | "pick" | "ten_bans_reveal";
   }[][];
-  localPlayerCellId: number;
-  isSpectating: boolean;
-  allowSkinSelection: boolean;
-  allowDuplicatePicks: boolean;
-  allowBattleBoost: boolean;
-  boostableSkinCount: number;
-  allowRerolling: boolean;
-  rerollsRemaining: number;
-  allowLockedEvents: boolean;
-  lockedEventIndex: number;
-  benchEnabled: boolean;
-  counter: number;
-  skipChampionSelect: boolean;
-  hasSimultaneousBans: boolean;
-  hasSimultaneousPicks: boolean;
-  isCustomGame: boolean;
+  declare localPlayerCellId: number;
+  declare isSpectating: boolean;
+  declare allowSkinSelection: boolean;
+  declare allowDuplicatePicks: boolean;
+  declare allowBattleBoost: boolean;
+  declare boostableSkinCount: number;
+  declare allowRerolling: boolean;
+  declare rerollsRemaining: number;
+  declare allowLockedEvents: boolean;
+  declare lockedEventIndex: number;
+  declare benchEnabled: boolean;
+  declare counter: number;
+  declare skipChampionSelect: boolean;
+  declare hasSimultaneousBans: boolean;
+  declare hasSimultaneousPicks: boolean;
+  declare isCustomGame: boolean;
 
+  // Derived in the constructor from `actions` — not present on the endpoint payload.
   ownBanActionId: number;
   ownPickActionId: number;
   inProgressActionIds: number[];
 
-  showQuitButton: boolean;
-  isLegacyChampSelect: boolean;
+  declare showQuitButton: boolean;
+  declare isLegacyChampSelect: boolean;
 
-  allowSubsetChampionPicks: boolean;
-  allowPlayerPickSameChampion: boolean;
-  disallowBanningTeammateHoveredChampions: boolean;
-  queueId: number;
+  declare allowSubsetChampionPicks: boolean;
+  declare allowPlayerPickSameChampion: boolean;
+  declare disallowBanningTeammateHoveredChampions: boolean;
+  declare queueId: number;
 
-  bans: LCUTypes.TeamBuilderDirect_ChampSelectBannedChampions;
-  id: string;
-  timer: LCUTypes.TeamBuilderDirect_TeambuilderDirectTypes_ChampSelectTimer;
-  chatDetails: LCUTypes.TeamBuilderDirect_ChampSelectChatRoomDetails;
-  myTeam: LCUTypes.TeamBuilderDirect_ChampSelectPlayerSelection[];
-  theirTeam: LCUTypes.TeamBuilderDirect_ChampSelectPlayerSelection[];
-  trades: LCUTypes.TeamBuilderDirect_ChampSelectSwapContract[];
-  pickOrderSwaps: LCUTypes.TeamBuilderDirect_ChampSelectSwapContract[];
-  positionSwaps: LCUTypes.TeamBuilderDirect_ChampSelectSwapContract[];
-  benchChampions: LCUTypes.TeamBuilderDirect_BenchChampion[];
+  declare bans: LCUTypes.TeamBuilderDirect_ChampSelectBannedChampions;
+  declare id: string;
+  declare timer: LCUTypes.TeamBuilderDirect_TeambuilderDirectTypes_ChampSelectTimer;
+  declare chatDetails: LCUTypes.TeamBuilderDirect_ChampSelectChatRoomDetails;
+  declare myTeam: LCUTypes.TeamBuilderDirect_ChampSelectPlayerSelection[];
+  declare theirTeam: LCUTypes.TeamBuilderDirect_ChampSelectPlayerSelection[];
+  declare trades: LCUTypes.TeamBuilderDirect_ChampSelectSwapContract[];
+  declare pickOrderSwaps: LCUTypes.TeamBuilderDirect_ChampSelectSwapContract[];
+  declare positionSwaps: LCUTypes.TeamBuilderDirect_ChampSelectSwapContract[];
+  declare benchChampions: LCUTypes.TeamBuilderDirect_BenchChampion[];
 
   constructor(data: LCUEndpointResponseType<"get", "/lol-champ-select/v1/session">) {
+    // Copy every endpoint field onto the instance in a single pass. Previously each field was
+    // assigned by hand, which had to be kept in sync with both the type and the LCU payload —
+    // a forgotten line silently dropped that field. The `declare`d field list above is the single
+    // source of truth the `implements` clause checks against.
+    Object.assign(this, data);
+
     this.ownBanActionId = -1;
     this.ownPickActionId = -1;
     this.inProgressActionIds = [];
-
-    this.actions = data.actions as any;
-    this.allowBattleBoost = data.allowBattleBoost;
-    this.allowDuplicatePicks = data.allowDuplicatePicks;
-    this.allowLockedEvents = data.allowLockedEvents;
-    this.allowRerolling = data.allowRerolling;
-    this.allowSkinSelection = data.allowSkinSelection;
-    this.benchChampions = data.benchChampions;
-    this.benchEnabled = data.benchEnabled;
-    this.boostableSkinCount = data.boostableSkinCount;
-    this.chatDetails = data.chatDetails;
-    this.counter = data.counter;
-    this.gameId = data.gameId;
-    this.hasSimultaneousBans = data.hasSimultaneousBans;
-    this.hasSimultaneousPicks = data.hasSimultaneousPicks;
-    this.isSpectating = data.isSpectating;
-    this.localPlayerCellId = data.localPlayerCellId;
-    this.lockedEventIndex = data.lockedEventIndex;
-    this.myTeam = data.myTeam;
-    this.rerollsRemaining = data.rerollsRemaining;
-    this.skipChampionSelect = data.skipChampionSelect;
-    this.theirTeam = data.theirTeam;
-    this.timer = data.timer;
-    this.isCustomGame = data.isCustomGame;
-    this.bans = data.bans;
-    this.pickOrderSwaps = data.pickOrderSwaps;
-    this.showQuitButton = data.showQuitButton;
-    this.isLegacyChampSelect = data.isLegacyChampSelect;
-    this.allowSubsetChampionPicks = data.allowSubsetChampionPicks;
-    this.allowPlayerPickSameChampion = data.allowPlayerPickSameChampion;
-    this.disallowBanningTeammateHoveredChampions = data.disallowBanningTeammateHoveredChampions;
-    this.queueId = data.queueId;
-    this.id = data.id;
-    this.trades = data.trades;
-    this.positionSwaps = data.positionSwaps;
 
     for (let actionGroup of this.actions)
       for (let action of actionGroup) {
@@ -130,7 +105,7 @@ export default class ChampSelectSession implements LCUEndpointResponseType<"get"
   }
 
   getPhase(): "PLANNING" | "BAN_PICK" | "FINALIZATION" | "" {
-    return this.timer.phase as any;
+    return this.timer.phase as "PLANNING" | "BAN_PICK" | "FINALIZATION" | "";
   }
 
   isBanPhase() {
