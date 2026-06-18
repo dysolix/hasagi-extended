@@ -283,7 +283,7 @@ export class HasagiClient extends TypedEmitter<Hasagi.Events> {
     }
 
     const oldSessionData = this.champSelectSession;
-    const newSessionData = new ChampSelectSession(event.data as any);
+    const newSessionData = new ChampSelectSession(event.data as LCUEndpointResponseType<"get", "/lol-champ-select/v1/session">);
     this.champSelectSession = newSessionData;
     this.emit("champ-select-session-update", newSessionData);
 
@@ -340,13 +340,13 @@ export class HasagiClient extends TypedEmitter<Hasagi.Events> {
 
   private onRunePagesUpdate(event: LCUTypes.PluginResourceEvent<unknown>) {
     if (event.eventType === "Update") {
-      this.runePages = event.data as any;
+      this.runePages = event.data as LCUEndpointResponseType<"get", "/lol-perks/v1/pages">;
       this.emit("rune-pages-update", this.runePages);
     }
   }
 
   private onCurrentRunePageUpdate(event: LCUTypes.PluginResourceEvent<unknown>) {
-    let updatedRunePage = event.data as any;
+    let updatedRunePage = event.data as LCUEndpointResponseType<"get", "/lol-perks/v1/pages">[number];
     let index = this.runePages.findIndex(rp => rp.id === updatedRunePage.id);
     let currentIndex = this.runePages.findIndex(rp => rp.current);
     if (currentIndex !== -1) this.runePages[currentIndex].current = false;
@@ -367,7 +367,7 @@ export class HasagiClient extends TypedEmitter<Hasagi.Events> {
       }
 
       default: {
-        this.gameflowSession = event.data as any;
+        this.gameflowSession = event.data as LCUEndpointResponseType<"get", "/lol-gameflow/v1/session">;
         break;
       }
     }
