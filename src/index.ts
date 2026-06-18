@@ -1,4 +1,4 @@
-import { HasagiClient as CoreClient, LCUEndpointBodyType, LCUEndpointResponseType, LCUTypes } from "@hasagi/core";
+import { HasagiClient as CoreClient, LCUEndpointBodyType, LCUEndpointResponseType, LCUTypes, LCUError, RequestError } from "@hasagi/core";
 import ChampSelectSession from "./classes/champ-select-session.js";
 import type Hasagi from "./types";
 export type { Hasagi };
@@ -8,41 +8,83 @@ export { ChampSelectSession };
 
 const delay = (ms: number) => new Promise<void>(resolve => setTimeout(resolve, ms));
 
+/**
+ * Awaits an initial-state fetch right after connect, retrying only while the client is still warming
+ * up — transport failures ({@link RequestError}, e.g. a plugin's port not accepting yet) and 5xx
+ * responses — up to `maxAttempts`. A definitive 4xx (e.g. 404 = resource genuinely absent, such as no
+ * active champ select or lobby) resolves/throws immediately, so the common "not in that state" cases
+ * add no latency. This only covers the transport/5xx axis of post-connect warmup. An endpoint that
+ * answers 200 with a still-populating payload (e.g. /lol-perks briefly returns zero rune pages right
+ * after a cold start) is NOT retried here — empty is indistinguishable from a legitimately-empty
+ * resource (a 0-page account), so it can't be a readiness signal; its live OnJsonApiEvent backfills it
+ * instead. Ready clients don't wait on retries, slow ones wait only as long as needed (capped at
+ * maxAttempts * retryDelayMs).
+ */
+async function awaitReady<T>(fetch: () => Promise<T>, maxAttempts = 10, retryDelayMs = 500): Promise<T> {
+  for (let attempt = 1; ; attempt++) {
+    try {
+      return await fetch();
+    } catch (error) {
+      const warmingUp = error instanceof RequestError || (error instanceof LCUError && error.statusCode >= 500);
+      if (!warmingUp || attempt >= maxAttempts)
+        throw error;
+      await delay(retryDelayMs);
+    }
+  }
+}
+
 export class HasagiClient extends CoreClient<Hasagi.Events> {
   public regionLocale: LCUEndpointResponseType<"get", "/riotclient/region-locale"> | null = null;
   public gameflowSession: LCUEndpointResponseType<"get", "/lol-gameflow/v1/session"> | null = null;
   public champSelectSession: ChampSelectSession | null = null;
   public runePages: LCUEndpointResponseType<"get", "/lol-perks/v1/pages"> = [];
 
+  /**
+   * Resources for which a live WebSocket event has delivered state since the current connection's
+   * initial fetch began (cleared at the start of each "connected"). An initial GET that resolves after
+   * its resource's event — a slow cold-start GET racing the populate event — checks this and skips, so
+   * it can't clobber fresher event data with its stale connect-time snapshot.
+   */
+  private readonly receivedEvents = new Set<string>();
+
   public constructor(...params: ConstructorParameters<typeof CoreClient>) {
     super(...params);
 
     this.on("connected", async () => {
+      // Reset for this connection. Each initial fetch below seeds state only if a live event hasn't
+      // already delivered it (see receivedEvents) — so a slow GET can't overwrite fresher event data.
+      this.receivedEvents.clear();
       this.subscribeWebSocketEvent("OnJsonApiEvent");
 
-      await delay(5000);
       await Promise.allSettled([
-        this.Runes.getRunePages().then(runePages => {
+        awaitReady(() => this.Runes.getRunePages()).then(runePages => {
+          if (this.receivedEvents.has("runePages")) return;
           this.runePages = runePages;
           this.emit("rune-pages-update", this.runePages);
         }),
-        this.getGameflowSession().then(async gameflowSession => {
+        awaitReady(() => this.getGameflowSession()).then(async gameflowSession => {
+          if (this.receivedEvents.has("gameflow")) return;
           this.gameflowSession = gameflowSession;
           this.emit("gameflow-session-update", this.gameflowSession);
           this.emit("gameflow-phase-update", this.gameflowSession?.phase ?? "None");
         }),
-        this.ChampSelect.getSession().then(session => {
+        awaitReady(() => this.ChampSelect.getSession()).then(session => {
+          if (this.receivedEvents.has("champSelect")) return;
           this.champSelectSession = session;
           this.emit("champ-select-session-update", session);
           this.emit("champ-select-phase-update", session.getPhase());
         }),
-        this.getClientRegion().then(regionLocale => {
+        awaitReady(() => this.getClientRegion()).then(regionLocale => {
           this.regionLocale = regionLocale;
         }),
-        this.Lobby.getLobby().then(lobby => {
+        awaitReady(() => this.Lobby.getLobby()).then(lobby => {
+          if (this.receivedEvents.has("lobby")) return;
           this.emit("lobby-update", lobby);
         }),
-        this.request("get", "/lol-end-of-game/v1/eog-stats-block").then(r => this.emit("end-of-game-data-received", r)),
+        awaitReady(() => this.request("get", "/lol-end-of-game/v1/eog-stats-block")).then(r => {
+          if (this.receivedEvents.has("eog")) return;
+          this.emit("end-of-game-data-received", r);
+        }),
       ]);
 
       this.emit("ready");
@@ -242,6 +284,7 @@ export class HasagiClient extends CoreClient<Hasagi.Events> {
 
   // #region EventHandler
   private onChampSelectSessionUpdate(event: LCUTypes.PluginResourceEvent<unknown>) {
+    this.receivedEvents.add("champSelect");
     if (event.eventType === "Delete") {
       this.champSelectSession = null;
       this.emit("champ-select-session-update", null);
@@ -307,6 +350,7 @@ export class HasagiClient extends CoreClient<Hasagi.Events> {
 
   private onRunePagesUpdate(event: LCUTypes.PluginResourceEvent<unknown>) {
     if (event.eventType === "Update") {
+      this.receivedEvents.add("runePages");
       this.runePages = event.data as LCUEndpointResponseType<"get", "/lol-perks/v1/pages">;
       this.emit("rune-pages-update", this.runePages);
     }
@@ -318,6 +362,7 @@ export class HasagiClient extends CoreClient<Hasagi.Events> {
     let currentIndex = this.runePages.findIndex(rp => rp.current);
     if (currentIndex !== -1) this.runePages[currentIndex].current = false;
     if (index === -1) return;
+    this.receivedEvents.add("runePages");
     this.runePages[index] = updatedRunePage;
     this.emit("rune-pages-update", this.runePages);
   }
@@ -326,6 +371,7 @@ export class HasagiClient extends CoreClient<Hasagi.Events> {
   public currentMap: LCUEndpointResponseType<"get", "/lol-gameflow/v1/session">["map"] | null = null;
 
   private async onGameflowSessionUpdate(event: LCUTypes.PluginResourceEvent<unknown>) {
+    this.receivedEvents.add("gameflow");
     const oldGameflowSession = this.gameflowSession;
     switch (event.eventType) {
       case "Delete": {
@@ -352,6 +398,7 @@ export class HasagiClient extends CoreClient<Hasagi.Events> {
   }
 
   private onLobbyUpdate(event: LCUTypes.PluginResourceEvent<unknown>) {
+    this.receivedEvents.add("lobby");
     switch (event.eventType) {
       case "Create":
       case "Update":
@@ -368,6 +415,7 @@ export class HasagiClient extends CoreClient<Hasagi.Events> {
     switch (event.eventType) {
       case "Create":
       case "Update":
+        this.receivedEvents.add("eog");
         const data = event.data as Hasagi.EndOfGameData;
         this.emit("end-of-game-data-received", data);
         break;
